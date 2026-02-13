@@ -43,6 +43,11 @@ app.use('/api/assignments', assignmentRoutes);
 // Serve uploads (securely - usually you wouldn't serve this static for sensitive files, but for demo we will control via routes)
 // app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// Root Route (Health Check)
+app.get('/', (req, res) => {
+    res.send('Secure Assignment System API is running...');
+});
+
 app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
 });
