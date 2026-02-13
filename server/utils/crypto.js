@@ -60,7 +60,7 @@ const decryptFile = (encryptedHex, key, ivHex, tagHex) => {
 // 3.1 Key Exchange Mechanism:
 // Secure key management using a system secret (simulated key exchange/storage).
 // In production, this would use a Key Management System (KMS).
-const SYSTEM_KEY = process.env.SYSTEM_KEY || 'a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90'; // Fixed 32-byte (64 hex char) key
+const SYSTEM_KEY = process.env.SYSTEM_KEY;
 
 module.exports = {
     encodeBase64,

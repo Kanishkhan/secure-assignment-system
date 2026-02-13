@@ -2,6 +2,8 @@
 
 > A comprehensive Full-Stack Web Application demonstrating robust security implementation for academic assignment management, featuring Multi-Factor Authentication (MFA), Role-Based Access Control (RBAC), and AES-256 Encryption.
 
+**Live Website:** [https://secure-assignment-system.vercel.app/login](https://secure-assignment-system.vercel.app/login)
+
 ## 📖 Overview
 
 The **Secure Assignment System** is designed to facilitate the secure submission, storage, and retrieval of academic assignments. Unlike standard submission portals, this project prioritizes data security and integrity, ensuring that sensitive assignment files are encrypted at rest and only accessible to authorized personnel.

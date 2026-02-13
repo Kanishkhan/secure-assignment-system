@@ -6,7 +6,7 @@ const speakeasy = require('speakeasy');
 const qrcode = require('qrcode');
 const User = require('../models/User'); // [MODIFY] Mongoose Model
 
-const SECRET_KEY = process.env.JWT_SECRET || 'super_secret_jwt_key_should_be_long';
+const SECRET_KEY = process.env.JWT_SECRET;
 
 // 1. REGISTER (Salted Hashing)
 // 1.1 Single-Factor Authentication:

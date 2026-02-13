@@ -22,7 +22,13 @@ const limiter = rateLimit({
 
 // Security Middleware
 app.use(helmet()); // Sets various HTTP headers for security
-app.use(cors());
+app.use(cors({
+    origin: [
+        "http://localhost:5173",
+        "https://your-frontend.vercel.app"
+    ],
+    credentials: true
+}));
 app.use(express.json());
 app.use(limiter); // Apply rate limiting to all requests
 
