@@ -26,7 +26,7 @@ app.use(helmet()); // Sets various HTTP headers for security
 app.use(cors({
     origin: [
         "http://localhost:5173",
-        "https://your-frontend.vercel.app"
+        "https://secure-assignment-system-dh7lhahxg-kanishkhans-projects.vercel.app"
     ],
     credentials: true
 }));
