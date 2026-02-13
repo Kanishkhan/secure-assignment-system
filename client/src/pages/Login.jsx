@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import api from '../axiosConfig';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { Button, Input, Card } from '../components/UI';
@@ -20,7 +20,7 @@ const Login = () => {
         // ...
         e.preventDefault();
         try {
-            const res = await axios.post('http://localhost:5000/api/auth/login', { username, password });
+            const res = await api.post('/api/auth/login', { username, password });
 
             if (res.data.mfaRequired) {
                 setUserId(res.data.userId);
@@ -40,7 +40,7 @@ const Login = () => {
     const handleMfaVerify = async (e) => {
         e.preventDefault();
         try {
-            const res = await axios.post('http://localhost:5000/api/auth/mfa/verify', { userId, token: mfaCode });
+            const res = await api.post('/api/auth/mfa/verify', { userId, token: mfaCode });
             if (res.data.success) {
                 login(res.data.token);
                 navigate('/dashboard');

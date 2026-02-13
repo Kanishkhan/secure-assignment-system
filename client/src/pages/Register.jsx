@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import api from '../axiosConfig';
 import { useNavigate, Link } from 'react-router-dom';
 import { Button, Input, Card } from '../components/UI';
 import logo from '../assets/logo.png';
@@ -11,7 +11,7 @@ const Register = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            await axios.post('http://localhost:5000/api/auth/register', formData);
+            await api.post('/api/auth/register', formData);
             alert('Registration Successful. Please Login.');
             navigate('/login');
         } catch (err) {
