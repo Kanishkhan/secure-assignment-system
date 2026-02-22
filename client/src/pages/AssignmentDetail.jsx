@@ -76,8 +76,7 @@ const AssignmentDetail = () => {
             await api.post(`/api/assignments/${id}/submit`, formData, {
                 headers: {
                     Authorization: `Bearer ${token}`,
-                    'Content-Type': 'multipart/form-data',
-                    'Accept': 'application/json'
+                    'Content-Type': 'multipart/form-data'
                 }
             });
             alert('File Encrypted and Submitted Securely!');
