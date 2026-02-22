@@ -148,8 +148,19 @@ router.get('/:id/my-submission', authenticateToken, authorizeRole(['student']), 
     const assignmentId = req.params.id;
     try {
         const submissions = await Submission.find({ assignment_id: assignmentId, student_id: req.user.id })
+            .populate('student_id', 'username')
             .sort({ submitted_at: -1 });
-        res.json(submissions);
+
+        // Transform to include username at top level for consistency
+        const results = submissions.map(sub => {
+            const subObj = sub.toJSON();
+            return {
+                ...subObj,
+                username: sub.student_id ? sub.student_id.username : 'You'
+            };
+        });
+
+        res.json(results);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -171,7 +182,6 @@ router.get('/:id/submissions', authenticateToken, authorizeRole(['teacher', 'adm
         const seenStudents = new Set();
 
         for (const sub of submissions) {
-            // Safety check for deleted users
             if (!sub.student_id) continue;
 
             const studentId = sub.student_id._id
@@ -184,7 +194,7 @@ router.get('/:id/submissions', authenticateToken, authorizeRole(['teacher', 'adm
                 const subObj = sub.toJSON();
                 uniqueSubmissions.push({
                     ...subObj,
-                    student_id: studentId,
+                    student_id: studentId, // Ensure ID is a string
                     username: sub.student_id.username || 'Unknown'
                 });
             }

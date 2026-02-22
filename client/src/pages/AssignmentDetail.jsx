@@ -165,11 +165,11 @@ const AssignmentDetail = () => {
                                                             <div>
                                                                 <div className="flex items-center gap-2">
                                                                     <p className="text-white font-medium">{latest.filename}</p>
+                                                                    <span className="text-[10px] bg-slate-700 text-slate-300 border border-slate-600 px-1.5 rounded">by {latest.username || 'You'}</span>
                                                                     <span className="text-[10px] bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-1.5 rounded" title="Encrypted with AES-256-GCM">AES-256</span>
                                                                     <span className="text-[10px] bg-teal-500/20 text-teal-300 border border-teal-500/30 px-1.5 rounded" title="Integrity Verified via SHA-256">SHA-256</span>
                                                                 </div>
                                                                 <p className="text-emerald-400/70 text-xs">
-                                                                    {/* specific fix: force UTC parsing by replacing space with T and adding Z */}
                                                                     Submitted: {new Date(latest.submitted_at).toLocaleString()}
                                                                 </p>
                                                             </div>
@@ -235,12 +235,13 @@ const AssignmentDetail = () => {
                                             <div key={sub.id} className="bg-slate-900/50 p-4 rounded-lg border border-slate-700 flex justify-between items-center group hover:bg-slate-800 transition-colors">
                                                 <div>
                                                     <div className="flex items-center gap-2">
+                                                        <span className="text-blue-400 font-bold">{sub.username}</span>
+                                                        <span className="text-slate-500">|</span>
                                                         <p className="font-medium text-white">{sub.filename}</p>
                                                         <span className="text-[10px] bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-1.5 rounded">AES-256</span>
-                                                        <span className="text-[10px] bg-teal-500/20 text-teal-300 border border-teal-500/30 px-1.5 rounded">SHA-256</span>
                                                     </div>
                                                     <p className="text-xs text-slate-500 mt-1">
-                                                        Submitted by: <span className="text-slate-300">{sub.username}</span> (ID: {sub.student_id}) •
+                                                        Student ID: {sub.student_id} •
                                                         On: {new Date(sub.submitted_at).toLocaleString()}
                                                     </p>
                                                 </div>
