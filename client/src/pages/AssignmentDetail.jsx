@@ -65,6 +65,7 @@ const AssignmentDetail = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         console.log("Submit triggered, file selected:", file?.name);
+        console.log("File metadata:", { type: file?.type, size: file?.size });
 
         if (!file) {
             alert("Please select a file first");
@@ -75,13 +76,26 @@ const AssignmentDetail = () => {
         formData.append('file', file);
 
         try {
-            console.log("Starting upload to:", `/api/assignments/${id}/submit`);
-            const res = await api.post(`/api/assignments/${id}/submit`, formData, {
+            const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+            console.log("Starting upload to:", `${baseUrl}/api/assignments/${id}/submit`);
+
+            // Using native fetch to bypass any Axios instance configuration
+            const response = await fetch(`${baseUrl}/api/assignments/${id}/submit`, {
+                method: 'POST',
                 headers: {
-                    Authorization: `Bearer ${token}`
-                }
+                    'Authorization': `Bearer ${token}`
+                },
+                body: formData
             });
-            console.log("Upload response:", res.data);
+
+            console.log("Response status:", response.status);
+            const data = await response.json();
+            console.log("Response data:", data);
+
+            if (!response.ok) {
+                throw new Error(data.error || `Upload failed (Status: ${response.status})`);
+            }
+
             alert('File Encrypted and Submitted Securely!');
             setFile(null); // Reset file input
 
@@ -93,8 +107,7 @@ const AssignmentDetail = () => {
             }
         } catch (error) {
             console.error("Full upload error:", error);
-            const errorMsg = error.response?.data?.error || error.message || 'Upload failed';
-            alert(`Upload Failed: ${errorMsg}`);
+            alert(`Upload Failed: ${error.message}`);
         }
     };
 
