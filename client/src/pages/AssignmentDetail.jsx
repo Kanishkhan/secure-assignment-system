@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../axiosConfig';
 import { useAuth } from '../context/AuthContext';
 import { Button, Card, Input } from '../components/UI';
 
@@ -25,7 +25,7 @@ const AssignmentDetail = () => {
 
     const fetchAssignment = async () => {
         try {
-            const res = await axios.get(`http://localhost:5000/api/assignments/${id}`, {
+            const res = await api.get(`/api/assignments/${id}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setAssignment(res.data);
@@ -37,7 +37,7 @@ const AssignmentDetail = () => {
 
     const fetchMySubmissions = async () => {
         try {
-            const res = await axios.get(`http://localhost:5000/api/assignments/${id}/my-submission`, {
+            const res = await api.get(`/api/assignments/${id}/my-submission`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             // Ensure we set an array
@@ -49,7 +49,7 @@ const AssignmentDetail = () => {
 
     const fetchSubmissions = async () => {
         try {
-            const res = await axios.get(`http://localhost:5000/api/assignments/${id}/submissions`, {
+            const res = await api.get(`/api/assignments/${id}/submissions`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setSubmissions(res.data);
@@ -73,10 +73,11 @@ const AssignmentDetail = () => {
         formData.append('file', file);
 
         try {
-            await axios.post(`http://localhost:5000/api/assignments/${id}/submit`, formData, {
+            await api.post(`/api/assignments/${id}/submit`, formData, {
                 headers: {
                     Authorization: `Bearer ${token}`,
-                    'Content-Type': 'multipart/form-data'
+                    'Content-Type': 'multipart/form-data',
+                    'Accept': 'application/json'
                 }
             });
             alert('File Encrypted and Submitted Securely!');
@@ -94,7 +95,7 @@ const AssignmentDetail = () => {
 
     const handleDownload = async (subId, filename) => {
         try {
-            const response = await axios.get(`http://localhost:5000/api/assignments/download/${subId}`, {
+            const response = await api.get(`/api/assignments/download/${subId}`, {
                 headers: { Authorization: `Bearer ${token}` },
                 responseType: 'blob'
             });

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import axios from 'axios';
+import api from '../axiosConfig';
 import { Button, Card, Input } from '../components/UI';
 import { Link } from 'react-router-dom';
 import logo from '../assets/logo.png';
@@ -20,7 +20,7 @@ const Dashboard = () => {
 
     const fetchUsers = async () => {
         try {
-            const res = await axios.get('http://localhost:5000/api/auth/users', {
+            const res = await api.get('/api/auth/users', {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setUsers(res.data);
@@ -32,7 +32,7 @@ const Dashboard = () => {
     const deleteUser = async (id) => {
         if (!window.confirm('Are you sure you want to delete this user?')) return;
         try {
-            await axios.delete(`http://localhost:5000/api/auth/users/${id}`, {
+            await api.delete(`/api/auth/users/${id}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             fetchUsers();
@@ -43,7 +43,7 @@ const Dashboard = () => {
 
     const fetchAssignments = async () => {
         try {
-            const res = await axios.get('http://localhost:5000/api/assignments', {
+            const res = await api.get('/api/assignments', {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setAssignments(res.data);
@@ -55,7 +55,7 @@ const Dashboard = () => {
     const handleDeleteAssignment = async (id) => {
         if (!window.confirm('Delete this assignment? This will also delete all student submissions for this assignment.')) return;
         try {
-            await axios.delete(`http://localhost:5000/api/assignments/${id}`, {
+            await api.delete(`/api/assignments/${id}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setAssignments(assignments.filter(a => a.id !== id));
@@ -67,13 +67,13 @@ const Dashboard = () => {
     // ... (MFA functions remain same)
 
     const setupMFA = async () => {
-        const res = await axios.post('http://localhost:5000/api/auth/mfa/setup');
+        const res = await api.post('/api/auth/mfa/setup');
         setMfaSetup(res.data);
     };
 
     const enableMFA = async () => {
         try {
-            const res = await axios.post('http://localhost:5000/api/auth/mfa/enable', {
+            const res = await api.post('/api/auth/mfa/enable', {
                 userId: user.id,
                 secret: mfaSetup.secret,
                 token: mfaToken
