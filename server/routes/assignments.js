@@ -8,7 +8,7 @@ const mongoose = require('mongoose');
 const Assignment = require('../models/Assignment');
 const Submission = require('../models/Submission');
 const { authenticateToken, authorizeRole } = require('../middleware/auth');
-const { encryptFile, decryptFile, computeHash, SYSTEM_KEY } = require('../utils/crypto');
+const { encryptFile, decryptFile, computeHash, encodeBase64, decodeBase64, SYSTEM_KEY } = require('../utils/crypto');
 const fs = require('fs');
 const path = require('path');
 
@@ -132,6 +132,15 @@ router.post('/:id/submit', upload.single('submission'), authenticateToken, autho
         // Demonstrating data integrity using hash-based verification.
         const fileHash = computeHash(file.buffer);
 
+        // 5.1 Encoding & Decoding Implementation:
+        // Base64-encode the SHA-256 hash for safe transport and display.
+        const fileHashBase64 = encodeBase64(fileHash);
+        // Decode to verify round-trip correctness
+        const fileHashDecoded = decodeBase64(fileHashBase64);
+        console.log('Hash (hex):', fileHash);
+        console.log('Hash (base64-encoded):', fileHashBase64);
+        console.log('Hash (base64-decoded back):', fileHashDecoded);
+
         // 3.2 Encryption & Decryption:
         // Implement secure encryption using AES-256-GCM.
         const { iv, encrypted, tag } = encryptFile(file.buffer, SYSTEM_KEY);
@@ -153,7 +162,14 @@ router.post('/:id/submit', upload.single('submission'), authenticateToken, autho
 
         console.log('Submission Successful:', submission);
 
-        res.json({ message: `Assignment submitted securely (Attempt ${count + 1}/3)`, submissionId: submission._id });
+        res.json({
+            message: `Assignment submitted securely (Attempt ${count + 1}/3)`,
+            submissionId: submission._id,
+            integrity: {
+                sha256: fileHash,
+                sha256_base64: fileHashBase64  // 5.1 Base64 encoded hash for display
+            }
+        });
     } catch (err) {
         console.error('Submission Error:', err);
         res.status(500).json({ error: err.message });

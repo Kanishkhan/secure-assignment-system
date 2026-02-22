@@ -107,7 +107,12 @@ const AssignmentDetail = () => {
                 throw new Error(data.error || `Upload failed (Status: ${response.status})`);
             }
 
-            alert('File Encrypted and Submitted Securely!');
+            const base64Hash = data.integrity?.sha256_base64 || '';
+            alert(
+                `✅ File Encrypted and Submitted Securely!\n\n` +
+                `🔒 SHA-256 Hash (Hex):\n${data.integrity?.sha256 || 'N/A'}\n\n` +
+                `📦 Base64 Encoded Hash:\n${base64Hash}`
+            );
             setFile(null);
 
             if (user?.role === 'student') {
