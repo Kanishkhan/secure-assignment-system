@@ -96,6 +96,14 @@ router.post('/:id/submit', authenticateToken, authorizeRole(['student']), upload
     const assignmentId = req.params.id;
     const file = req.file;
 
+    console.log('--- Submission Debug ---');
+    console.log('Content-Type:', req.headers['content-type']);
+    console.log('File received:', file ? file.originalname : 'NONE');
+    if (!file) {
+        console.log('Body keys:', Object.keys(req.body));
+    }
+    console.log('-----------------------');
+
     try {
         const assignment = await Assignment.findById(assignmentId);
         if (!assignment) return res.status(404).json({ error: 'Assignment not found' });
