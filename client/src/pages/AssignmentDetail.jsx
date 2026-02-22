@@ -107,11 +107,20 @@ const AssignmentDetail = () => {
                 throw new Error(data.error || `Upload failed (Status: ${response.status})`);
             }
 
-            const base64Hash = data.integrity?.sha256_base64 || '';
+            // Compute hashes client-side as fallback if backend didn't return them
+            const fileBuffer = await file.arrayBuffer();
+            const hashBuffer = await crypto.subtle.digest('SHA-256', fileBuffer);
+            const hashHex = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+            const hashBase64 = btoa(hashHex); // Base64 encode the hex hash
+
+            // Use backend values if available, fall back to client-side
+            const sha256Hex = data.integrity?.sha256 || hashHex;
+            const sha256Base64 = data.integrity?.sha256_base64 || hashBase64;
+
             alert(
                 `✅ File Encrypted and Submitted Securely!\n\n` +
-                `🔒 SHA-256 Hash (Hex):\n${data.integrity?.sha256 || 'N/A'}\n\n` +
-                `📦 Base64 Encoded Hash:\n${base64Hash}`
+                `🔒 SHA-256 Hash (Hex):\n${sha256Hex}\n\n` +
+                `📦 Base64 Encoded Hash:\n${sha256Base64}`
             );
             setFile(null);
 
