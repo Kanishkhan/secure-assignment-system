@@ -64,6 +64,8 @@ const AssignmentDetail = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        console.log("Submit triggered, file selected:", file?.name);
+
         if (!file) {
             alert("Please select a file first");
             return;
@@ -73,22 +75,25 @@ const AssignmentDetail = () => {
         formData.append('file', file);
 
         try {
-            await api.post(`/api/assignments/${id}/submit`, formData, {
+            console.log("Starting upload to:", `/api/assignments/${id}/submit`);
+            const res = await api.post(`/api/assignments/${id}/submit`, formData, {
                 headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'multipart/form-data'
+                    Authorization: `Bearer ${token}`
                 }
             });
+            console.log("Upload response:", res.data);
             alert('File Encrypted and Submitted Securely!');
             setFile(null); // Reset file input
+
             if (user?.role === 'teacher' || user?.role === 'admin') {
                 fetchSubmissions();
             } else {
                 fetchMySubmissions(); // Refresh student view
             }
         } catch (error) {
-            console.error(error);
-            alert(error.response?.data?.error || 'Upload failed');
+            console.error("Full upload error:", error);
+            const errorMsg = error.response?.data?.error || error.message || 'Upload failed';
+            alert(`Upload Failed: ${errorMsg}`);
         }
     };
 
