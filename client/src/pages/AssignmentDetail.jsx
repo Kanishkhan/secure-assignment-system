@@ -85,10 +85,11 @@ const AssignmentDetail = () => {
             alert('File Encrypted and Submitted Securely!');
             setFile(null); // Reset file input
 
+            if (user?.role === 'student') {
+                await fetchMySubmissions();
+            }
             if (user?.role === 'teacher' || user?.role === 'admin') {
-                fetchSubmissions();
-            } else {
-                fetchMySubmissions(); // Refresh student view
+                await fetchSubmissions();
             }
         } catch (error) {
             console.error("Full upload error:", error);
@@ -99,6 +100,7 @@ const AssignmentDetail = () => {
 
     const handleDownload = async (subId, filename) => {
         try {
+            console.log("Downloading submission:", subId);
             const response = await api.get(`/api/assignments/download/${subId}`, {
                 headers: { Authorization: `Bearer ${token}` },
                 responseType: 'blob'
@@ -110,7 +112,9 @@ const AssignmentDetail = () => {
             link.setAttribute('download', filename);
             document.body.appendChild(link);
             link.click();
+            window.URL.revokeObjectURL(url);
         } catch (error) {
+            console.error("Download error:", error);
             alert('Download/Decryption failed');
         }
     };
@@ -195,7 +199,7 @@ const AssignmentDetail = () => {
                                                     </div>
 
                                                     <Button
-                                                        onClick={() => handleDownload(mySubmissions[0].id, mySubmissions[0].filename)}
+                                                        onClick={() => handleDownload(mySubmissions[0]._id || mySubmissions[0].id, mySubmissions[0].filename)}
                                                         className="bg-slate-800 hover:bg-emerald-600 border border-slate-700 hover:border-emerald-500 text-white flex items-center gap-2 px-6 py-3 transition-all transform active:scale-95"
                                                     >
                                                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
@@ -297,7 +301,7 @@ const AssignmentDetail = () => {
                                 ) : (
                                     <div className="grid gap-4">
                                         {submissions.map(sub => (
-                                            <div key={sub.id} className="bg-slate-900/50 p-4 rounded-lg border border-slate-700 flex justify-between items-center group hover:bg-slate-800 transition-colors">
+                                            <div key={sub._id || sub.id} className="bg-slate-900/50 p-4 rounded-lg border border-slate-700 flex justify-between items-center group hover:bg-slate-800 transition-colors">
                                                 <div>
                                                     <div className="flex items-center gap-2">
                                                         <span className="text-blue-400 font-bold">{sub.username}</span>
@@ -310,7 +314,7 @@ const AssignmentDetail = () => {
                                                         On: {new Date(sub.submitted_at).toLocaleString()}
                                                     </p>
                                                 </div>
-                                                <Button onClick={() => handleDownload(sub.id, sub.filename)} className="text-sm py-1.5 px-3 bg-slate-700 hover:bg-blue-600 border border-slate-600 hover:border-blue-500">
+                                                <Button onClick={() => handleDownload(sub._id || sub.id, sub.filename)} className="text-sm py-1.5 px-3 bg-slate-700 hover:bg-blue-600 border border-slate-600 hover:border-blue-500">
                                                     Decrypt & Download
                                                 </Button>
                                             </div>
