@@ -174,7 +174,12 @@ const AssignmentDetail = () => {
                                                                 </p>
                                                             </div>
                                                         </div>
-                                                        <span className="text-xs font-mono text-slate-500">Attempt #{mySubmissions.length}</span>
+                                                        <div className="flex items-center gap-3">
+                                                            <span className="text-xs font-mono text-slate-500">Attempt #{mySubmissions.length}</span>
+                                                            <Button onClick={() => handleDownload(latest.id, latest.filename)} className="text-xs py-1.5 px-3 bg-slate-700 hover:bg-emerald-600 border border-slate-600 hover:border-emerald-500">
+                                                                Download my file
+                                                            </Button>
+                                                        </div>
                                                     </div>
                                                 );
                                             })()}

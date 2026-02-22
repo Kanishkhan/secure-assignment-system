@@ -211,7 +211,8 @@ router.get('/:id/submissions', authenticateToken, authorizeRole(['teacher', 'adm
 // 3.2 Encryption & Decryption:
 // Decrypting the file for authorized download.
 // Verifying Integrity (Digital Signature Check)
-router.get('/download/:submissionId', authenticateToken, authorizeRole(['teacher', 'admin']), async (req, res) => {
+// router.get('/download/:submissionId', authenticateToken, authorizeRole(['teacher', 'admin']), async (req, res) => {
+router.get('/download/:submissionId', authenticateToken, async (req, res) => {
     const submissionId = req.params.submissionId;
     console.log('Download initiated for:', submissionId);
 
@@ -223,6 +224,11 @@ router.get('/download/:submissionId', authenticateToken, authorizeRole(['teacher
         }
 
         console.log('Found submission:', submission.filename, submission.encrypted_path);
+
+        // Security Check: Only teacher, admin, OR the student who submitted it can download
+        if (req.user.role !== 'teacher' && req.user.role !== 'admin' && submission.student_id.toString() !== req.user.id) {
+            return res.status(403).json({ error: 'Unauthorized to download this file' });
+        }
 
         // Read Encrypted File
         if (!fs.existsSync(submission.encrypted_path)) {
