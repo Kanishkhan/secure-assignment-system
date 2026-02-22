@@ -77,10 +77,10 @@ const AssignmentDetail = () => {
 
         try {
             const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-            console.log("Starting upload to:", `${baseUrl}/api/assignments/${id}/submit`);
+            const uploadUrl = `${baseUrl}/api/assignments/${id}/submit`;
+            console.log("Uploading to:", uploadUrl);
 
-            // Using native fetch to bypass any Axios instance configuration
-            const response = await fetch(`${baseUrl}/api/assignments/${id}/submit`, {
+            const response = await fetch(uploadUrl, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`
@@ -89,15 +89,26 @@ const AssignmentDetail = () => {
             });
 
             console.log("Response status:", response.status);
-            const data = await response.json();
-            console.log("Response data:", data);
+            const rawText = await response.text();
+            console.log("Raw response preview:", rawText.substring(0, 300));
+
+            // Detect HTML response (backend sleeping / 502 error)
+            let data;
+            try {
+                data = JSON.parse(rawText);
+            } catch {
+                if (response.status >= 500 || rawText.includes('<!DOCTYPE')) {
+                    throw new Error('The backend server is asleep (Render free tier). Please wait 30 seconds and try again!');
+                }
+                throw new Error(`Server returned unexpected response (Status: ${response.status})`);
+            }
 
             if (!response.ok) {
                 throw new Error(data.error || `Upload failed (Status: ${response.status})`);
             }
 
             alert('File Encrypted and Submitted Securely!');
-            setFile(null); // Reset file input
+            setFile(null);
 
             if (user?.role === 'student') {
                 await fetchMySubmissions();
@@ -106,7 +117,7 @@ const AssignmentDetail = () => {
                 await fetchSubmissions();
             }
         } catch (error) {
-            console.error("Full upload error:", error);
+            console.error("Upload error:", error);
             alert(`Upload Failed: ${error.message}`);
         }
     };
