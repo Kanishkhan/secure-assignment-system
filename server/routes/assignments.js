@@ -191,11 +191,17 @@ router.get('/:id/submissions', authenticateToken, authorizeRole(['teacher', 'adm
             if (!seenStudents.has(studentId)) {
                 seenStudents.add(studentId);
 
+                // Count total attempts for this student to show to teacher
+                const studentAttemptCount = submissions.filter(s =>
+                    (s.student_id._id ? s.student_id._id.toString() : s.student_id.toString()) === studentId
+                ).length;
+
                 const subObj = sub.toJSON();
                 uniqueSubmissions.push({
                     ...subObj,
-                    student_id: studentId, // Ensure ID is a string
-                    username: sub.student_id.username || 'Unknown'
+                    student_id: studentId,
+                    username: sub.student_id.username || 'Unknown',
+                    attemptNumber: studentAttemptCount
                 });
             }
         }

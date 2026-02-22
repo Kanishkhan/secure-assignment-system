@@ -311,6 +311,7 @@ const AssignmentDetail = () => {
                                                     </div>
                                                     <p className="text-xs text-slate-500 mt-1">
                                                         Student ID: {sub.student_id} •
+                                                        Attempt: {sub.attemptNumber} / 3 •
                                                         On: {new Date(sub.submitted_at).toLocaleString()}
                                                     </p>
                                                 </div>
