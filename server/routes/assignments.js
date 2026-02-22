@@ -92,7 +92,7 @@ router.delete('/:id', authenticateToken, authorizeRole(['teacher']), async (req,
 
 // 2.3 Implementation of Access Control:
 // Policy: Only users with 'student' role can submit assignments.
-router.post('/:id/submit', authenticateToken, authorizeRole(['student']), upload.single('file'), async (req, res) => {
+router.post('/:id/submit', upload.single('submission'), authenticateToken, authorizeRole(['student']), async (req, res) => {
     const assignmentId = req.params.id;
     const file = req.file;
 
@@ -117,7 +117,16 @@ router.post('/:id/submit', authenticateToken, authorizeRole(['student']), upload
             return res.status(400).json({ error: 'Maximum 3 attempts reached' });
         }
 
-        if (!file) return res.status(400).json({ error: 'No file uploaded' });
+        if (!file) {
+            return res.status(400).json({
+                error: 'No file uploaded',
+                debug: {
+                    contentType: req.headers['content-type'],
+                    bodyKeys: Object.keys(req.body),
+                    multerFile: !!req.file
+                }
+            });
+        }
 
         // 4.2 Digital Signature using Hash:
         // Demonstrating data integrity using hash-based verification.
