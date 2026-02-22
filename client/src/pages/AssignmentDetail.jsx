@@ -73,7 +73,7 @@ const AssignmentDetail = () => {
         }
 
         const formData = new FormData();
-        formData.append('submission', file); // Must match backend multer field name
+        formData.append('submission', file);
 
         try {
             const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
