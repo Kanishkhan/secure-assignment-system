@@ -24,12 +24,17 @@ const limiter = rateLimit({
 // Security Middleware
 app.use(helmet()); // Sets various HTTP headers for security
 app.use(cors({
-    origin: [
-        "http://localhost:5173",
-        process.env.FRONTEND_URL,
-        "https://secure-assignment-system.vercel.app",
-        "https://secure-assignment-system-dh7lhahxg-kanishkhans-projects.vercel.app"
-    ].filter(Boolean),
+    origin: function (origin, callback) {
+        // Allow local dev, the main production URL, and any Vercel preview URLs
+        if (!origin || 
+            origin === "http://localhost:5173" || 
+            origin.includes("secure-assignment-system") && origin.includes("vercel.app")
+        ) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     credentials: true
 }));
 app.use(express.json());
