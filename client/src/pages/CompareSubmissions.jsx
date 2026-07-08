@@ -13,6 +13,8 @@ const CompareSubmissions = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [syncScroll, setSyncScroll] = useState(true);
+    const [hoveredIdxA, setHoveredIdxA] = useState(null);
+    const [hoveredIdxB, setHoveredIdxB] = useState(null);
 
     const paneARef = useRef(null);
     const paneBRef = useRef(null);
@@ -148,13 +150,26 @@ const CompareSubmissions = () => {
                             >
                                 {data.comparison.paragraphsA.map((p, idx) => {
                                     const isMatch = data.comparison.matchingParagraphsA.includes(idx);
+                                    const isHovered = idx === hoveredIdxA;
                                     return (
                                         <p 
                                             key={idx} 
-                                            className={`p-3 rounded-lg border transition-colors ${
-                                                isMatch 
-                                                    ? 'bg-red-500/10 text-red-200 border-red-500/20' 
-                                                    : 'bg-transparent border-transparent'
+                                            onMouseEnter={() => {
+                                                if (isMatch && data.comparison.matchMapAtoB) {
+                                                    setHoveredIdxA(idx);
+                                                    setHoveredIdxB(data.comparison.matchMapAtoB[idx]);
+                                                }
+                                            }}
+                                            onMouseLeave={() => {
+                                                setHoveredIdxA(null);
+                                                setHoveredIdxB(null);
+                                            }}
+                                            className={`p-3 rounded-lg border transition-all duration-200 ${
+                                                isHovered 
+                                                    ? 'bg-red-500/20 text-white border-red-500/80 scale-[1.01] shadow-lg shadow-red-500/10' 
+                                                    : isMatch 
+                                                        ? 'bg-red-500/10 text-red-200 border-red-500/20' 
+                                                        : 'bg-transparent border-transparent'
                                             }`}
                                         >
                                             {p}
@@ -180,13 +195,26 @@ const CompareSubmissions = () => {
                             >
                                 {data.comparison.paragraphsB.map((p, idx) => {
                                     const isMatch = data.comparison.matchingParagraphsB.includes(idx);
+                                    const isHovered = idx === hoveredIdxB;
                                     return (
                                         <p 
                                             key={idx} 
-                                            className={`p-3 rounded-lg border transition-colors ${
-                                                isMatch 
-                                                    ? 'bg-red-500/10 text-red-200 border-red-500/20' 
-                                                    : 'bg-transparent border-transparent'
+                                            onMouseEnter={() => {
+                                                if (isMatch && data.comparison.matchMapBtoA) {
+                                                    setHoveredIdxB(idx);
+                                                    setHoveredIdxA(data.comparison.matchMapBtoA[idx]);
+                                                }
+                                            }}
+                                            onMouseLeave={() => {
+                                                setHoveredIdxA(null);
+                                                setHoveredIdxB(null);
+                                            }}
+                                            className={`p-3 rounded-lg border transition-all duration-200 ${
+                                                isHovered 
+                                                    ? 'bg-red-500/20 text-white border-red-500/80 scale-[1.01] shadow-lg shadow-red-500/10' 
+                                                    : isMatch 
+                                                        ? 'bg-red-500/10 text-red-200 border-red-500/20' 
+                                                        : 'bg-transparent border-transparent'
                                             }`}
                                         >
                                             {p}

@@ -69,8 +69,14 @@ const calculateFileHash = (buffer) => {
  */
 const extractPDF = async (buffer) => {
     if (!pdfParse) pdfParse = require('pdf-parse');
-    const data = await pdfParse(buffer);
-    return data.text || '';
+    if (pdfParse.PDFParse) {
+        const parser = new pdfParse.PDFParse(new Uint8Array(buffer));
+        const data = await parser.getText();
+        return data.text || '';
+    } else {
+        const data = await pdfParse(buffer);
+        return data.text || '';
+    }
 };
 
 /**

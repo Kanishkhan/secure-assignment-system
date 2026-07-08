@@ -26,3 +26,6 @@ teacher2
 
 Student1
 1234567
+
+Student2
+1234567

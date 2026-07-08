@@ -22,6 +22,8 @@ export const AuthProvider = ({ children }) => {
             } catch (e) {
                 logout();
             }
+        } else {
+            setUser(null);
         }
     }, [token]);
 

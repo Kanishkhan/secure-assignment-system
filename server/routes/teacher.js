@@ -19,6 +19,8 @@ const getHighlightData = (textA, textB) => {
 
     const matchesA = [];
     const matchesB = [];
+    const matchMapAtoB = {};
+    const matchMapBtoA = {};
     let matchParagraphCount = 0;
     let matchLineCount = 0;
 
@@ -43,6 +45,8 @@ const getHighlightData = (textA, textB) => {
                 if (!matchesB.includes(idxB)) {
                     matchesB.push(idxB);
                 }
+                matchMapAtoB[idxA] = idxB;
+                matchMapBtoA[idxB] = idxA;
             }
         });
 
@@ -77,6 +81,8 @@ const getHighlightData = (textA, textB) => {
         paragraphsB,
         matchingParagraphsA: matchesA,
         matchingParagraphsB: matchesB,
+        matchMapAtoB,
+        matchMapBtoA,
         matchParagraphCount,
         matchLineCount
     };
@@ -231,7 +237,9 @@ router.get('/compare/:submission1/:submission2', authenticateToken, authorizeRol
                 paragraphsA: highlightResult.paragraphsA,
                 paragraphsB: highlightResult.paragraphsB,
                 matchingParagraphsA: highlightResult.matchingParagraphsA,
-                matchingParagraphsB: highlightResult.matchingParagraphsB
+                matchingParagraphsB: highlightResult.matchingParagraphsB,
+                matchMapAtoB: highlightResult.matchMapAtoB,
+                matchMapBtoA: highlightResult.matchMapBtoA
             }
         });
     } catch (err) {
