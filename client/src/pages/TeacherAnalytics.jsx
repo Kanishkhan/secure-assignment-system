@@ -211,37 +211,12 @@ const TeacherAnalytics = () => {
                             </Button>
                         </Link>
                         
-                        <div className="relative group flex-1 md:flex-none">
-                            <Button className="w-full text-xs px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg flex items-center justify-center gap-2">
-                                📥 Export Report
-                            </Button>
-                            <div className="absolute right-0 mt-2 w-48 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl hidden group-hover:block hover:block z-50 overflow-hidden">
-                                <button 
-                                    onClick={handlePrintPDF}
-                                    className="w-full text-left px-4 py-2.5 text-xs text-slate-200 hover:bg-slate-700 transition-colors border-b border-slate-750"
-                                >
-                                    📄 Print / PDF Report
-                                </button>
-                                <button 
-                                    onClick={() => exportToCSV(analytics.assignmentHealth, ['title', 'totalStudents', 'submitted', 'pending', 'late', 'averageSimilarity', 'riskStatus'], 'assignment_health.csv')}
-                                    className="w-full text-left px-4 py-2.5 text-xs text-slate-200 hover:bg-slate-700 transition-colors border-b border-slate-750"
-                                >
-                                    📊 CSV: Assignment Health
-                                </button>
-                                <button 
-                                    onClick={() => exportToCSV(analytics.studentMatrix, ['username', 'submittedCount', 'pendingCount', 'lateCount', 'duplicateCount', 'averageSimilarity', 'status'], 'student_matrix.csv')}
-                                    className="w-full text-left px-4 py-2.5 text-xs text-slate-200 hover:bg-slate-700 transition-colors border-b border-slate-750"
-                                >
-                                    👥 CSV: Student Performance
-                                </button>
-                                <button 
-                                    onClick={() => exportToCSV(analytics.timeline, ['timestamp', 'username', 'role', 'action', 'status', 'details'], 'audit_trail.csv')}
-                                    className="w-full text-left px-4 py-2.5 text-xs text-slate-200 hover:bg-slate-700 transition-colors"
-                                >
-                                    🛡️ CSV: Complete Audit Log
-                                </button>
-                            </div>
-                        </div>
+                        <Button 
+                            onClick={handlePrintPDF}
+                            className="flex-1 md:flex-none text-xs px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg flex items-center justify-center gap-2"
+                        >
+                            📥 Export PDF Report
+                        </Button>
                     </div>
                 </header>
 
