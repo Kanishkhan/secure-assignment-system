@@ -117,6 +117,10 @@ const Dashboard = () => {
                                 <div className="bg-white p-2 rounded-lg w-fit mx-auto mb-6">
                                     <img src={mfaSetup.qrCode} alt="QR Code" className="w-48 h-48" />
                                 </div>
+                                <p className="mb-2 text-center text-xs text-slate-400">Or enter secret key manually:</p>
+                                <div className="bg-slate-800 p-2 rounded text-center mb-6">
+                                    <p className="text-xs text-slate-500 break-all font-mono select-all" id="mfa-secret-text">{mfaSetup.secret}</p>
+                                </div>
                                 <p className="mb-2 text-center text-sm font-medium">2. Enter the 6-digit Code</p>
                                 <Input label="" value={mfaToken} onChange={e => setMfaToken(e.target.value)} placeholder="000 000" className="text-center text-xl tracking-widest mb-4" />
                                 <Button onClick={enableMFA} className="w-full bg-emerald-600 hover:bg-emerald-500">Verify & Activate</Button>

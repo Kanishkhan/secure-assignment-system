@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -5,8 +6,6 @@ const path = require('path');
 const connectDB = require('./database/db'); // [MODIFY]
 const authRoutes = require('./routes/auth');
 const assignmentRoutes = require('./routes/assignments');
-
-require('dotenv').config();
 
 const rateLimit = require('express-rate-limit');
 
