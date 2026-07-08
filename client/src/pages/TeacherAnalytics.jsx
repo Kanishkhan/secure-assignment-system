@@ -283,29 +283,20 @@ const TeacherAnalytics = () => {
                         {/* KPI Cards Grid */}
                         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
                             {[
-                                { label: 'Total Assignments', val: analytics.cards.totalAssignments, border: 'border-l-blue-500' },
+                                { label: 'Assignments', val: analytics.cards.totalAssignments, border: 'border-l-blue-500' },
                                 { label: 'Total Students', val: analytics.cards.totalStudents, border: 'border-l-violet-500' },
-                                { label: 'Total Submissions', val: analytics.cards.totalSubmissions, border: 'border-l-indigo-500' },
+                                { label: 'Submissions', val: analytics.cards.totalSubmissions, border: 'border-l-indigo-500' },
                                 { label: 'Submission Rate', val: `${analytics.cards.submissionRate}%`, border: 'border-l-teal-500' },
-                                { label: 'Avg Submit Time', val: `${analytics.cards.averageSubmissionTime} days`, border: 'border-l-emerald-500' },
                                 { label: 'Avg Similarity', val: `${analytics.cards.averageSimilarity}%`, border: 'border-l-yellow-500', isSim: true },
                                 { label: 'Duplicate Files', val: analytics.cards.duplicateFiles, border: 'border-l-red-500', isDup: true },
                                 { label: 'Late Uploads', val: analytics.cards.lateSubmissions, border: 'border-l-orange-500', isLate: true },
-                                { label: 'Pending Eval', val: analytics.cards.pendingEvaluations, border: 'border-l-pink-500' },
-                                { label: 'Reviews Done', val: analytics.cards.teacherReviewsCompleted, border: 'border-l-sky-500' },
-                                { label: 'Integrity Fails', val: analytics.cards.integrityFailures, border: 'border-l-red-600', isFail: true },
-                                { label: 'Downloads Count', val: analytics.cards.downloadedAssignments, border: 'border-l-slate-400' },
-                                { label: 'Encryption Success', val: `${analytics.cards.encryptionSuccessRate}%`, border: 'border-l-green-500' },
-                                { label: 'Auth Success Rate', val: `${analytics.cards.authenticationSuccessRate}%`, border: 'border-l-cyan-500' },
-                                { label: "Today's Uploads", val: analytics.cards.todayUploads, border: 'border-l-purple-500' },
-                                { label: 'Weekly Uploads', val: analytics.cards.weekUploads, border: 'border-l-fuchsia-500' }
+                                { label: 'Pending Eval', val: analytics.cards.pendingEvaluations, border: 'border-l-pink-500' }
                             ].map((card, i) => (
                                 <div key={i} className={`bg-slate-850/40 border border-slate-800 p-4 rounded-xl text-center border-l-4 ${card.border} shadow-lg shadow-black/10`}>
                                     <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1.5">{card.label}</p>
                                     <p className={`text-xl font-extrabold ${
                                         card.isDup && card.val > 0 ? 'text-red-400' :
                                         card.isLate && card.val > 0 ? 'text-orange-400' :
-                                        card.isFail && card.val > 0 ? 'text-red-500 font-black animate-pulse' :
                                         card.isSim && card.val >= 70 ? 'text-red-400' :
                                         card.isSim && card.val >= 40 ? 'text-yellow-400' :
                                         card.isSim ? 'text-emerald-400' : 'text-white'
@@ -394,23 +385,7 @@ const TeacherAnalytics = () => {
                                     </div>
                                 </Card>
 
-                                {/* Chart 2: Hourly Uploads Distribution */}
-                                <Card className="bg-slate-850/30 border-slate-800">
-                                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-6">Submission Hour Distribution</h3>
-                                    <div className="h-64">
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <BarChart data={analytics.charts.submissionTimeDistribution}>
-                                                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                                                <XAxis dataKey="hour" stroke="#64748b" style={{ fontSize: 9 }} />
-                                                <YAxis stroke="#64748b" style={{ fontSize: 9 }} />
-                                                <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155' }} />
-                                                <Bar name="Uploads Count" dataKey="submissions" fill="#8b5cf6" radius={[3, 3, 0, 0]} />
-                                            </BarChart>
-                                        </ResponsiveContainer>
-                                    </div>
-                                </Card>
-
-                                {/* Chart 3: Similarity Distribution */}
+                                {/* Chart 2: Similarity Distribution */}
                                 <Card className="bg-slate-850/30 border-slate-800">
                                     <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-6">Similarity Distribution</h3>
                                     <div className="h-64 flex flex-col md:flex-row justify-center items-center gap-8">
@@ -444,41 +419,7 @@ const TeacherAnalytics = () => {
                                     </div>
                                 </Card>
 
-                                {/* Chart 4: Copy Severity Distribution */}
-                                <Card className="bg-slate-850/30 border-slate-800">
-                                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-6">Duplicate Risk Segment Distribution</h3>
-                                    <div className="h-64 flex flex-col md:flex-row justify-center items-center gap-8">
-                                        <div className="w-44 h-44">
-                                            <ResponsiveContainer width="100%" height="100%">
-                                                <PieChart>
-                                                    <Pie
-                                                        data={analytics.charts.duplicateDistribution}
-                                                        innerRadius={45}
-                                                        outerRadius={65}
-                                                        paddingAngle={4}
-                                                        dataKey="value"
-                                                    >
-                                                        {analytics.charts.duplicateDistribution.map((entry, index) => (
-                                                            <Cell key={`cell-${index}`} fill={DUP_COLORS[index % DUP_COLORS.length]} />
-                                                        ))}
-                                                    </Pie>
-                                                    <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155' }} />
-                                                </PieChart>
-                                            </ResponsiveContainer>
-                                        </div>
-                                        <div className="flex flex-col gap-2.5">
-                                            {analytics.charts.duplicateDistribution.map((entry, index) => (
-                                                <div key={index} className="flex items-center gap-2 text-xs">
-                                                    <span className="w-2.5 h-2.5 rounded" style={{ backgroundColor: DUP_COLORS[index] }}></span>
-                                                    <span className="text-slate-400 font-medium">{entry.name}:</span>
-                                                    <span className="font-extrabold text-white">{entry.value}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </Card>
-
-                                {/* Chart 5: Funnel Completion Rate */}
+                                {/* Chart 3: Funnel Completion Rate */}
                                 <Card className="bg-slate-850/30 border-slate-800">
                                     <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-6">Assignment Completion funnel</h3>
                                     <div className="h-64">
@@ -496,45 +437,7 @@ const TeacherAnalytics = () => {
                                     </div>
                                 </Card>
 
-                                {/* Chart 6: Class Performance Radar */}
-                                <Card className="bg-slate-850/30 border-slate-800">
-                                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-6">Assignment Multi-Metric Radar</h3>
-                                    <div className="h-64">
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <RadarChart cx="50%" cy="50%" outerRadius="75%" data={analytics.charts.radarChart}>
-                                                <PolarGrid stroke="#334155" />
-                                                <PolarAngleAxis dataKey="subject" stroke="#64748b" style={{ fontSize: 9 }} />
-                                                <PolarRadiusAxis angle={30} domain={[0, 100]} stroke="#475569" style={{ fontSize: 8 }} />
-                                                <Radar name="Completion Rate %" dataKey="Completion %" stroke="#10b981" fill="#10b981" fillOpacity={0.25} />
-                                                <Radar name="Avg Similarity %" dataKey="Avg Similarity %" stroke="#ef4444" fill="#ef4444" fillOpacity={0.2} />
-                                                <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155' }} />
-                                                <Legend wrapperStyle={{ fontSize: 10 }} />
-                                            </RadarChart>
-                                        </ResponsiveContainer>
-                                    </div>
-                                </Card>
-
-                                {/* Chart 7: Heatmap Grid */}
-                                <Card className="bg-slate-850/30 border-slate-800">
-                                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-6">Submission Temporal Heatmap</h3>
-                                    <div className="h-64">
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <BarChart data={analytics.charts.submissionHeatmap}>
-                                                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                                                <XAxis dataKey="day" stroke="#64748b" style={{ fontSize: 9 }} />
-                                                <YAxis stroke="#64748b" style={{ fontSize: 9 }} />
-                                                <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155' }} />
-                                                <Legend wrapperStyle={{ fontSize: 10 }} />
-                                                <Bar name="Night (0-6)" dataKey="Night (0-6)" fill="#1e1b4b" stackId="a" />
-                                                <Bar name="Morning (6-12)" dataKey="Morning (6-12)" fill="#3b82f6" stackId="a" />
-                                                <Bar name="Afternoon (12-18)" dataKey="Afternoon (12-18)" fill="#eab308" stackId="a" />
-                                                <Bar name="Evening (18-24)" dataKey="Evening (18-24)" fill="#f97316" stackId="a" />
-                                            </BarChart>
-                                        </ResponsiveContainer>
-                                    </div>
-                                </Card>
-
-                                {/* Chart 8: Top Risk Assignments */}
+                                {/* Chart 4: Top Risk Assignments */}
                                 <Card className="bg-slate-850/30 border-slate-800">
                                     <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-6">Top Risk Assignments Index</h3>
                                     <div className="h-64">
