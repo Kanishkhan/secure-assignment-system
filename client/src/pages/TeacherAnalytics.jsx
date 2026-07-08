@@ -737,7 +737,7 @@ const TeacherAnalytics = () => {
                                                 </td>
                                                 <td className="p-4 text-center">
                                                     {d.matchedSubmissionId ? (
-                                                        <Link to={`/compare/${d.id}/${d.matchedSubmissionId}`}>
+                                                        <Link to={`/teacher/compare/${d.id}/${d.matchedSubmissionId}`}>
                                                             <Button className="text-[10px] px-3 py-1 bg-slate-800 hover:bg-slate-750 text-white rounded">
                                                                 Compare Files
                                                             </Button>
