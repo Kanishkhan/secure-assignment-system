@@ -213,9 +213,21 @@ const TeacherAnalytics = () => {
                         
                         <Button 
                             onClick={handlePrintPDF}
-                            className="flex-1 md:flex-none text-xs px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg flex items-center justify-center gap-2"
+                            className="flex-1 md:flex-none text-xs px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg flex items-center justify-center gap-1.5"
                         >
-                            📥 Export PDF Report
+                            📄 Print / Save PDF
+                        </Button>
+                        <Button 
+                            onClick={() => exportToCSV(analytics.assignmentHealth, ['title', 'totalStudents', 'submitted', 'pending', 'late', 'averageSimilarity', 'riskStatus'], 'assignment_health.csv')}
+                            className="flex-1 md:flex-none text-xs px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg flex items-center justify-center gap-1.5"
+                        >
+                            📊 Download Health CSV
+                        </Button>
+                        <Button 
+                            onClick={() => exportToCSV(analytics.studentMatrix, ['username', 'submittedCount', 'pendingCount', 'lateCount', 'duplicateCount', 'averageSimilarity', 'status'], 'student_performance.csv')}
+                            className="flex-1 md:flex-none text-xs px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg flex items-center justify-center gap-1.5"
+                        >
+                            👥 Download Student CSV
                         </Button>
                     </div>
                 </header>
