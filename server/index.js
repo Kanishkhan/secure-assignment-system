@@ -6,6 +6,7 @@ const path = require('path');
 const connectDB = require('./database/db'); // [MODIFY]
 const authRoutes = require('./routes/auth');
 const assignmentRoutes = require('./routes/assignments');
+const teacherRoutes = require('./routes/teacher');
 
 const rateLimit = require('express-rate-limit');
 
@@ -45,6 +46,7 @@ connectDB(); // [MODIFY]
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/assignments', assignmentRoutes);
+app.use('/api/teacher', teacherRoutes);
 
 // Serve uploads (securely - usually you wouldn't serve this static for sensitive files, but for demo we will control via routes)
 // app.use('/uploads', express.static(path.join(__dirname, 'uploads')));

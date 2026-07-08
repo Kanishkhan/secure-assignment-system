@@ -11,6 +11,7 @@ const { authenticateToken, authorizeRole } = require('../middleware/auth');
 const { encryptFile, decryptFile, computeHash, encodeBase64, decodeBase64, SYSTEM_KEY } = require('../utils/crypto');
 const fs = require('fs');
 const path = require('path');
+const { runSimilarityAnalysis } = require('../services/similarityService');
 
 // Configure Multer for memory storage
 const upload = multer({ storage: multer.memoryStorage() });
@@ -157,10 +158,16 @@ router.post('/:id/submit', upload.single('submission'), authenticateToken, autho
             student_id: req.user.id,
             filename: file.originalname,
             encrypted_path: filePath,
-            file_hash: fileHash
+            file_hash: fileHash,
+            fileHash: fileHash
         });
 
         console.log('Submission Successful:', submission);
+
+        // Run similarity analysis asynchronously (avoid blocking the user response)
+        runSimilarityAnalysis(submission._id, file.buffer).catch(err => {
+            console.error('Similarity analysis error in background:', err);
+        });
 
         res.json({
             message: `Assignment submitted securely (Attempt ${count + 1}/3)`,

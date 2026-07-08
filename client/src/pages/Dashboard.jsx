@@ -233,11 +233,18 @@ const Dashboard = () => {
                         <div className="bg-slate-800/50 backdrop-blur-xl border border-slate-700 rounded-2xl p-8 h-full">
                             <div className="flex justify-between items-center mb-8">
                                 <h2 className="text-2xl font-bold text-white">Assignments</h2>
-                                {user?.role === 'teacher' && (
-                                    <Link to="/assignments/new">
-                                        <Button className="bg-cyan-600 hover:bg-cyan-700">+ New Assignment</Button>
-                                    </Link>
-                                )}
+                                <div className="flex gap-3">
+                                    {(user?.role === 'teacher' || user?.role === 'admin') && (
+                                        <Link to="/teacher/analytics">
+                                            <Button variant="secondary" className="px-4 py-2 text-sm bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700">Analytics Hub</Button>
+                                        </Link>
+                                    )}
+                                    {user?.role === 'teacher' && (
+                                        <Link to="/assignments/new">
+                                            <Button className="bg-cyan-600 hover:bg-cyan-700 px-4 py-2 text-sm">+ New Assignment</Button>
+                                        </Link>
+                                    )}
+                                </div>
                             </div>
 
                             <div className="grid grid-cols-1 gap-4">
@@ -266,10 +273,17 @@ const Dashboard = () => {
                                                     </button>
                                                 ) : <div></div>}
 
-                                                <Link to={`/assignments/${a.id}`} className="text-sm font-medium text-blue-400 hover:text-blue-300 flex items-center gap-1 group/link ml-auto">
-                                                    {user?.role === 'student' ? 'Submit Work' : 'View Submissions'}
-                                                    <span className="group-hover/link:translate-x-1 transition-transform">→</span>
-                                                </Link>
+                                                <div className="flex gap-3 ml-auto items-center">
+                                                    {(user?.role === 'teacher' || user?.role === 'admin') && (
+                                                        <Link to={`/teacher/plagiarism/${a.id}`} className="text-xs font-semibold text-orange-400 hover:text-orange-300 border border-orange-500/20 bg-orange-500/5 px-3 py-1.5 rounded-lg transition-colors">
+                                                            Similarity Report
+                                                        </Link>
+                                                    )}
+                                                    <Link to={`/assignments/${a.id}`} className="text-sm font-medium text-blue-400 hover:text-blue-300 flex items-center gap-1 group/link">
+                                                        {user?.role === 'student' ? 'Submit Work' : 'View Submissions'}
+                                                        <span className="group-hover/link:translate-x-1 transition-transform">→</span>
+                                                    </Link>
+                                                </div>
                                             </div>
                                         </div>
                                     ))

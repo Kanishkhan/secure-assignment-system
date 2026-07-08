@@ -6,6 +6,9 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import CreateAssignment from './pages/CreateAssignment';
 import AssignmentDetail from './pages/AssignmentDetail';
+import PlagiarismReport from './pages/PlagiarismReport';
+import CompareSubmissions from './pages/CompareSubmissions';
+import TeacherAnalytics from './pages/TeacherAnalytics';
 
 const PrivateRoute = ({ children }) => {
     const { token } = useAuth();
@@ -22,6 +25,9 @@ function App() {
                     <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
                     <Route path="/assignments/new" element={<PrivateRoute><CreateAssignment /></PrivateRoute>} />
                     <Route path="/assignments/:id" element={<PrivateRoute><AssignmentDetail /></PrivateRoute>} />
+                    <Route path="/teacher/plagiarism/:assignmentId" element={<PrivateRoute><PlagiarismReport /></PrivateRoute>} />
+                    <Route path="/teacher/compare/:sub1/:sub2" element={<PrivateRoute><CompareSubmissions /></PrivateRoute>} />
+                    <Route path="/teacher/analytics" element={<PrivateRoute><TeacherAnalytics /></PrivateRoute>} />
                     <Route path="*" element={<Navigate to="/login" />} />
                 </Routes>
             </Router>
