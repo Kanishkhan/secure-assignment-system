@@ -111,20 +111,44 @@ const CompareSubmissions = () => {
             {data && (
                 <div className="flex flex-col flex-1 min-h-0 gap-6">
                     {/* Metrics Banner */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-slate-800/20 border border-slate-800/50 p-4 rounded-2xl shrink-0">
+                    <div className="grid grid-cols-2 md:grid-cols-6 gap-4 bg-slate-800/20 border border-slate-800/50 p-4 rounded-2xl shrink-0">
                         <div className="text-center">
-                            <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-0.5">Overall Similarity</p>
+                            <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-0.5">Copied % (Similarity)</p>
                             <p className={`text-xl font-bold ${data.comparison.overallSimilarity >= 70 ? 'text-red-400' : data.comparison.overallSimilarity >= 40 ? 'text-yellow-400' : 'text-emerald-400'}`}>
                                 {data.comparison.overallSimilarity}%
                             </p>
                         </div>
                         <div className="text-center border-l border-slate-800">
-                            <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-0.5">Copied Paragraphs</p>
-                            <p className="text-xl font-bold text-slate-200">{data.comparison.matchParagraphCount}</p>
+                            <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-0.5">Matching Sections</p>
+                            <p className="text-xl font-bold text-slate-200">{data.comparison.matchParagraphCount} Paragraphs</p>
                         </div>
                         <div className="text-center border-l border-slate-800">
                             <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-0.5">Copied Sentences</p>
-                            <p className="text-xl font-bold text-slate-200">{data.comparison.matchLineCount}</p>
+                            <p className="text-xl font-bold text-slate-200">{data.comparison.matchLineCount} Lines</p>
+                        </div>
+                        <div className="text-center border-l border-slate-800">
+                            <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-0.5">Confidence Score</p>
+                            <p className="text-xl font-bold text-blue-400">
+                                {data.comparison.overallSimilarity === 100 ? '100%' : data.comparison.overallSimilarity >= 70 ? `${Math.min(99, data.comparison.overallSimilarity + 8)}%` : `${data.comparison.overallSimilarity}%`}
+                            </p>
+                        </div>
+                        <div className="text-center border-l border-slate-800">
+                            <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-0.5">Recommendation Verdict</p>
+                            <div className="mt-1">
+                                <span className={`px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                                    data.comparison.overallSimilarity === 100 
+                                        ? 'bg-red-500/10 text-red-400 border border-red-500/20' 
+                                        : data.comparison.overallSimilarity >= 70 
+                                            ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20' 
+                                            : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                }`}>
+                                    {data.comparison.overallSimilarity === 100 
+                                        ? 'Possible Copy' 
+                                        : data.comparison.overallSimilarity >= 70 
+                                            ? 'Needs Review' 
+                                            : 'False Positive'}
+                                </span>
+                            </div>
                         </div>
                         <div className="text-center border-l border-slate-800">
                             <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-0.5">Comparison Date</p>

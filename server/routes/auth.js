@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 const speakeasy = require('speakeasy');
 const qrcode = require('qrcode');
 const User = require('../models/User'); // [MODIFY] Mongoose Model
+const AuditLog = require('../models/AuditLog');
 
 const SECRET_KEY = process.env.JWT_SECRET;
 
@@ -43,13 +44,35 @@ router.post('/register', async (req, res) => {
 // Login route implements username/password verification.
 router.post('/login', async (req, res) => {
     const { username, password } = req.body;
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1';
 
     try {
         const user = await User.findOne({ username });
-        if (!user) return res.status(401).json({ error: 'Invalid credentials' });
+        if (!user) {
+            await AuditLog.create({
+                username: username || 'unknown',
+                role: 'unknown',
+                ipAddress: ip,
+                action: 'LOGIN',
+                status: 'Failed',
+                details: 'Login failed: Username not found'
+            });
+            return res.status(401).json({ error: 'Invalid credentials' });
+        }
 
         const match = await bcrypt.compare(password, user.password);
-        if (!match) return res.status(401).json({ error: 'Invalid credentials' });
+        if (!match) {
+            await AuditLog.create({
+                userId: user._id,
+                username: user.username,
+                role: user.role,
+                ipAddress: ip,
+                action: 'LOGIN',
+                status: 'Failed',
+                details: 'Login failed: Incorrect password'
+            });
+            return res.status(401).json({ error: 'Invalid credentials' });
+        }
 
         if (user.mfa_enabled) {
             return res.json({ mfaRequired: true, userId: user._id });
@@ -57,6 +80,17 @@ router.post('/login', async (req, res) => {
 
         // Generate JWT (Include mfa_enabled status)
         const token = jwt.sign({ id: user._id, role: user.role, username: user.username, mfa_enabled: user.mfa_enabled }, SECRET_KEY, { expiresIn: '1h' });
+        
+        await AuditLog.create({
+            userId: user._id,
+            username: user.username,
+            role: user.role,
+            ipAddress: ip,
+            action: 'LOGIN',
+            status: 'Success',
+            details: 'Login successful via password'
+        });
+
         res.json({ token, role: user.role, mfaRequired: false });
     } catch (err) {
         console.error('Login error:', err);
@@ -108,10 +142,21 @@ router.post('/mfa/enable', async (req, res) => {
 // This route validates the second factor (TOTP) during the login process.
 router.post('/mfa/verify', async (req, res) => {
     const { userId, token } = req.body;
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1';
 
     try {
         const user = await User.findById(userId);
-        if (!user) return res.status(401).json({ error: 'User not found' });
+        if (!user) {
+            await AuditLog.create({
+                username: 'unknown',
+                role: 'unknown',
+                ipAddress: ip,
+                action: 'LOGIN',
+                status: 'Failed',
+                details: 'MFA login failed: User not found'
+            });
+            return res.status(401).json({ error: 'User not found' });
+        }
 
         const verified = speakeasy.totp.verify({
             secret: user.mfa_secret,
@@ -122,8 +167,28 @@ router.post('/mfa/verify', async (req, res) => {
 
         if (verified) {
             const jwtToken = jwt.sign({ id: user._id, role: user.role, username: user.username, mfa_enabled: true }, SECRET_KEY, { expiresIn: '1h' });
+            
+            await AuditLog.create({
+                userId: user._id,
+                username: user.username,
+                role: user.role,
+                ipAddress: ip,
+                action: 'LOGIN',
+                status: 'Success',
+                details: 'Login successful via password + MFA verification'
+            });
+
             res.json({ token: jwtToken, role: user.role, success: true });
         } else {
+            await AuditLog.create({
+                userId: user._id,
+                username: user.username,
+                role: user.role,
+                ipAddress: ip,
+                action: 'LOGIN',
+                status: 'Failed',
+                details: 'Login failed: Invalid MFA Code'
+            });
             res.status(401).json({ error: 'Invalid MFA Code' });
         }
     } catch (err) {
@@ -153,6 +218,26 @@ router.delete('/users/:id', authenticateToken, authorizeRole(['admin']), async (
         await User.findByIdAndDelete(userId);
         res.json({ message: 'User deleted' });
     } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// LOGOUT: Audit and clear session logging
+router.post('/logout', authenticateToken, async (req, res) => {
+    try {
+        const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1';
+        await AuditLog.create({
+            userId: req.user.id,
+            username: req.user.username,
+            role: req.user.role,
+            ipAddress: ip,
+            action: 'LOGOUT',
+            status: 'Success',
+            details: 'User logged out successfully'
+        });
+        res.json({ success: true, message: 'Logged out successfully' });
+    } catch (err) {
+        console.error('Logout audit error:', err);
         res.status(500).json({ error: err.message });
     }
 });

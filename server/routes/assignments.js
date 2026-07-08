@@ -7,6 +7,7 @@ const multer = require('multer');
 const mongoose = require('mongoose');
 const Assignment = require('../models/Assignment');
 const Submission = require('../models/Submission');
+const AuditLog = require('../models/AuditLog');
 const { authenticateToken, authorizeRole } = require('../middleware/auth');
 const { encryptFile, decryptFile, computeHash, encodeBase64, decodeBase64, SYSTEM_KEY } = require('../utils/crypto');
 const fs = require('fs');
@@ -54,6 +55,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
 // Policy: Only users with 'teacher' role can create assignments.
 router.post('/', authenticateToken, authorizeRole(['teacher']), async (req, res) => {
     const { title, description, deadline } = req.body;
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1';
     try {
         const newAssignment = await Assignment.create({
             title,
@@ -61,6 +63,17 @@ router.post('/', authenticateToken, authorizeRole(['teacher']), async (req, res)
             creator_id: req.user.id,
             deadline
         });
+
+        await AuditLog.create({
+            userId: req.user.id,
+            username: req.user.username,
+            role: req.user.role,
+            ipAddress: ip,
+            action: 'ASSIGNMENT_CREATED',
+            status: 'Success',
+            details: `Assignment "${title}" created successfully (ID: ${newAssignment._id})`
+        });
+
         res.json({ message: 'Assignment created', id: newAssignment._id });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -70,6 +83,7 @@ router.post('/', authenticateToken, authorizeRole(['teacher']), async (req, res)
 // 2.5 DELETE Assignment (Teacher Only)
 router.delete('/:id', authenticateToken, authorizeRole(['teacher']), async (req, res) => {
     const assignmentId = req.params.id;
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1';
 
     try {
         const assignment = await Assignment.findById(assignmentId);
@@ -84,6 +98,16 @@ router.delete('/:id', authenticateToken, authorizeRole(['teacher']), async (req,
 
         // Delete assignment
         await Assignment.findByIdAndDelete(assignmentId);
+
+        await AuditLog.create({
+            userId: req.user.id,
+            username: req.user.username,
+            role: req.user.role,
+            ipAddress: ip,
+            action: 'ASSIGNMENT_DELETED',
+            status: 'Success',
+            details: `Assignment "${assignment.title}" deleted successfully (ID: ${assignmentId})`
+        });
 
         res.json({ message: 'Assignment deleted successfully' });
     } catch (err) {
@@ -163,6 +187,17 @@ router.post('/:id/submit', upload.single('submission'), authenticateToken, autho
         });
 
         console.log('Submission Successful:', submission);
+
+        const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1';
+        await AuditLog.create({
+            userId: req.user.id,
+            username: req.user.username,
+            role: req.user.role,
+            ipAddress: ip,
+            action: 'SUBMISSION_UPLOADED',
+            status: 'Success',
+            details: `Submission uploaded for assignment: "${assignment.title}". Filename: "${file.originalname}" (Attempt ${count + 1}/3)`
+        });
 
         // Run similarity analysis asynchronously (avoid blocking the user response)
         runSimilarityAnalysis(submission._id, file.buffer).catch(err => {
@@ -271,8 +306,19 @@ router.get('/download/:submissionId', authenticateToken, async (req, res) => {
 
         console.log('Found submission:', submission.filename, submission.encrypted_path);
 
+        const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1';
+
         // Security Check: Only teacher, admin, OR the student who submitted it can download
         if (req.user.role !== 'teacher' && req.user.role !== 'admin' && submission.student_id.toString() !== req.user.id) {
+            await AuditLog.create({
+                userId: req.user.id,
+                username: req.user.username,
+                role: req.user.role,
+                ipAddress: ip,
+                action: 'SUBMISSION_DOWNLOADED',
+                status: 'Failed',
+                details: `Blocked unauthorized download attempt for submission ID: ${submissionId} (File: "${submission.filename}")`
+            });
             return res.status(403).json({ error: 'Unauthorized to download this file' });
         }
 
@@ -285,15 +331,55 @@ router.get('/download/:submissionId', authenticateToken, async (req, res) => {
         const { iv, encrypted, tag } = JSON.parse(fileContent);
 
         // Decrypt
-        // 3.2 Encryption & Decryption:
-        // Decrypting the file for authorized download.
-        const decryptedBuffer = decryptFile(encrypted, SYSTEM_KEY, iv, tag);
+        let decryptedBuffer;
+        try {
+            decryptedBuffer = decryptFile(encrypted, SYSTEM_KEY, iv, tag);
+        } catch (decError) {
+            await AuditLog.create({
+                userId: req.user.id,
+                username: req.user.username,
+                role: req.user.role,
+                ipAddress: ip,
+                action: 'INTEGRITY_VERIFIED',
+                status: 'Failed',
+                details: `Decryption failed or file tampered for submission ID: ${submissionId}. Error: ${decError.message}`
+            });
+            return res.status(500).json({ error: 'Decryption failed: ' + decError.message });
+        }
 
         // Verify Integrity
         const currentHash = computeHash(decryptedBuffer);
-        if (currentHash !== submission.file_hash) {
+        const integrityMatched = (currentHash === submission.file_hash);
+
+        await AuditLog.create({
+            userId: req.user.id,
+            username: req.user.username,
+            role: req.user.role,
+            ipAddress: ip,
+            action: 'INTEGRITY_VERIFIED',
+            status: integrityMatched ? 'Success' : 'Failed',
+            details: integrityMatched 
+                ? `Integrity check PASSED for file "${submission.filename}". Hashing verified.`
+                : `Integrity check FAILED! File hash mismatch detected for file "${submission.filename}". Possible tamper attempt!`
+        });
+
+        if (!integrityMatched) {
             console.warn('Integrity Check Failed!');
         }
+
+        // Track successful download
+        await AuditLog.create({
+            userId: req.user.id,
+            username: req.user.username,
+            role: req.user.role,
+            ipAddress: ip,
+            action: 'SUBMISSION_DOWNLOADED',
+            status: 'Success',
+            details: `Submission downloaded and decrypted successfully: "${submission.filename}"`
+        });
+
+        submission.downloadCount = (submission.downloadCount || 0) + 1;
+        await submission.save();
 
         res.setHeader('Content-Disposition', `attachment; filename="${submission.filename}"`);
         res.send(decryptedBuffer);
