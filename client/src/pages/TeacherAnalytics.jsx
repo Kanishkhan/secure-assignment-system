@@ -139,7 +139,15 @@ const TeacherAnalytics = () => {
                 margin:       [0.2, 0.2],
                 filename:     'Teacher_Analytics_Report.pdf',
                 image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#0f172a' },
+                html2canvas:  { 
+                    scale: 1.5, 
+                    useCORS: true, 
+                    backgroundColor: '#0f172a',
+                    scrollY: 0,
+                    scrollX: 0,
+                    windowScrollY: 0,
+                    windowScrollX: 0
+                },
                 jsPDF:        { unit: 'in', format: 'letter', orientation: 'landscape' }
             };
             
@@ -400,8 +408,8 @@ const TeacherAnalytics = () => {
                                                 <YAxis stroke="#64748b" style={{ fontSize: 9 }} />
                                                 <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', color: '#f1f5f9' }} />
                                                 <Legend wrapperStyle={{ fontSize: 10 }} />
-                                                <Area name="Total Submissions" type="monotone" dataKey="uploads" stroke="#3b82f6" fillOpacity={1} fill="url(#colorUploadsUp)" />
-                                                <Area name="Late Submissions" type="monotone" dataKey="lates" stroke="#f97316" fillOpacity={0} />
+                                                <Area name="Total Submissions" type="monotone" dataKey="uploads" stroke="#3b82f6" fillOpacity={1} fill="url(#colorUploadsUp)" isAnimationActive={false} />
+                                                <Area name="Late Submissions" type="monotone" dataKey="lates" stroke="#f97316" fillOpacity={0} isAnimationActive={false} />
                                             </AreaChart>
                                         </ResponsiveContainer>
                                     </div>
@@ -420,6 +428,7 @@ const TeacherAnalytics = () => {
                                                         outerRadius={65}
                                                         paddingAngle={4}
                                                         dataKey="value"
+                                                        isAnimationActive={false}
                                                     >
                                                         {analytics.charts.similarityDistribution.map((entry, index) => (
                                                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -452,8 +461,8 @@ const TeacherAnalytics = () => {
                                                 <YAxis stroke="#64748b" style={{ fontSize: 9 }} />
                                                 <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155' }} />
                                                 <Legend wrapperStyle={{ fontSize: 10 }} />
-                                                <Bar name="Students Enrolled" dataKey="students" fill="#475569" radius={[3, 3, 0, 0]} />
-                                                <Bar name="Submissions Received" dataKey="submitted" fill="#10b981" radius={[3, 3, 0, 0]} />
+                                                <Bar name="Students Enrolled" dataKey="students" fill="#475569" radius={[3, 3, 0, 0]} isAnimationActive={false} />
+                                                <Bar name="Submissions Received" dataKey="submitted" fill="#10b981" radius={[3, 3, 0, 0]} isAnimationActive={false} />
                                             </BarChart>
                                         </ResponsiveContainer>
                                     </div>
@@ -469,7 +478,7 @@ const TeacherAnalytics = () => {
                                                 <XAxis type="number" stroke="#64748b" style={{ fontSize: 9 }} />
                                                 <YAxis dataKey="name" type="category" stroke="#64748b" style={{ fontSize: 9 }} width={120} />
                                                 <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155' }} />
-                                                <Bar name="Risk Factor Value" dataKey="riskIndex" fill="#f43f5e" radius={[0, 3, 3, 0]} />
+                                                <Bar name="Risk Factor Value" dataKey="riskIndex" fill="#f43f5e" radius={[0, 3, 3, 0]} isAnimationActive={false} />
                                             </BarChart>
                                         </ResponsiveContainer>
                                     </div>
