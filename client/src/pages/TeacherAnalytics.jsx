@@ -124,6 +124,47 @@ const TeacherAnalytics = () => {
         window.print();
     };
 
+    const handleDownloadPDF = () => {
+        const triggerHtml2Pdf = () => {
+            const element = document.getElementById('analytics-root') || document.body;
+            
+            // Query elements to hide
+            const elementsToHide = document.querySelectorAll('.print\\:hidden');
+            elementsToHide.forEach(el => {
+                el.setAttribute('data-prev-display', el.style.display);
+                el.style.display = 'none';
+            });
+
+            const opt = {
+                margin:       [0.2, 0.2],
+                filename:     'Teacher_Analytics_Report.pdf',
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#0f172a' },
+                jsPDF:        { unit: 'in', format: 'letter', orientation: 'landscape' }
+            };
+            
+            window.html2pdf().from(element).set(opt).save().then(() => {
+                elementsToHide.forEach(el => {
+                    el.style.display = el.getAttribute('data-prev-display') || '';
+                });
+            }).catch(err => {
+                console.error(err);
+                elementsToHide.forEach(el => {
+                    el.style.display = el.getAttribute('data-prev-display') || '';
+                });
+            });
+        };
+
+        if (!window.html2pdf) {
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+            script.onload = triggerHtml2Pdf;
+            document.body.appendChild(script);
+        } else {
+            triggerHtml2Pdf();
+        }
+    };
+
     if (loading) {
         return (
             <div className="min-h-screen bg-slate-900 text-slate-100 flex items-center justify-center p-8">
@@ -189,7 +230,7 @@ const TeacherAnalytics = () => {
     const paginatedAudit = filteredAudit.slice((auditPage - 1) * auditLimit, auditPage * auditLimit);
 
     return (
-        <div className="min-h-screen bg-slate-900 text-slate-100 p-6 md:p-8 print:bg-white print:text-black">
+        <div id="analytics-root" className="min-h-screen bg-slate-900 text-slate-100 p-6 md:p-8 print:bg-white print:text-black">
             <div className="max-w-7xl mx-auto space-y-8">
                 
                 {/* Header */}
@@ -213,21 +254,15 @@ const TeacherAnalytics = () => {
                         
                         <Button 
                             onClick={handlePrintPDF}
-                            className="flex-1 md:flex-none text-xs px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg flex items-center justify-center gap-1.5"
+                            className="flex-1 md:flex-none text-xs px-4 py-2 bg-blue-650 hover:bg-blue-550 text-white border border-blue-500/20 rounded-lg flex items-center justify-center gap-1.5"
                         >
                             📄 Print / Save PDF
                         </Button>
                         <Button 
-                            onClick={() => exportToCSV(analytics.assignmentHealth, ['title', 'totalStudents', 'submitted', 'pending', 'late', 'averageSimilarity', 'riskStatus'], 'assignment_health.csv')}
-                            className="flex-1 md:flex-none text-xs px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg flex items-center justify-center gap-1.5"
+                            onClick={handleDownloadPDF}
+                            className="flex-1 md:flex-none text-xs px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg flex items-center justify-center gap-1.5 shadow-lg shadow-blue-500/10 animate-pulse-subtle"
                         >
-                            📊 Download Health CSV
-                        </Button>
-                        <Button 
-                            onClick={() => exportToCSV(analytics.studentMatrix, ['username', 'submittedCount', 'pendingCount', 'lateCount', 'duplicateCount', 'averageSimilarity', 'status'], 'student_performance.csv')}
-                            className="flex-1 md:flex-none text-xs px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg flex items-center justify-center gap-1.5"
-                        >
-                            👥 Download Student CSV
+                            📥 Download PDF
                         </Button>
                     </div>
                 </header>
