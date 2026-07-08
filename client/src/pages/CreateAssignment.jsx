@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import api from '../axiosConfig';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Button, Input, Card } from '../components/UI';
@@ -14,7 +14,7 @@ const CreateAssignment = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            await axios.post('http://localhost:5000/api/assignments',
+            await api.post('/api/assignments',
                 { title, description, deadline },
                 { headers: { Authorization: `Bearer ${token}` } }
             );

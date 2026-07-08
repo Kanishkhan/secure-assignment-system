@@ -8,7 +8,7 @@ const mongoose = require('mongoose');
 const Assignment = require('../models/Assignment');
 const Submission = require('../models/Submission');
 const { authenticateToken, authorizeRole } = require('../middleware/auth');
-const { encryptFile, decryptFile, computeHash, SYSTEM_KEY } = require('../utils/crypto');
+const { encryptFile, decryptFile, computeHash, encodeBase64, decodeBase64, SYSTEM_KEY } = require('../utils/crypto');
 const fs = require('fs');
 const path = require('path');
 
@@ -92,9 +92,17 @@ router.delete('/:id', authenticateToken, authorizeRole(['teacher']), async (req,
 
 // 2.3 Implementation of Access Control:
 // Policy: Only users with 'student' role can submit assignments.
-router.post('/:id/submit', authenticateToken, authorizeRole(['student']), upload.single('file'), async (req, res) => {
+router.post('/:id/submit', upload.single('submission'), authenticateToken, authorizeRole(['student']), async (req, res) => {
     const assignmentId = req.params.id;
     const file = req.file;
+
+    console.log('--- Submission Debug ---');
+    console.log('Content-Type:', req.headers['content-type']);
+    console.log('File received:', file ? file.originalname : 'NONE');
+    if (!file) {
+        console.log('Body keys:', Object.keys(req.body));
+    }
+    console.log('-----------------------');
 
     try {
         const assignment = await Assignment.findById(assignmentId);
@@ -109,11 +117,29 @@ router.post('/:id/submit', authenticateToken, authorizeRole(['student']), upload
             return res.status(400).json({ error: 'Maximum 3 attempts reached' });
         }
 
-        if (!file) return res.status(400).json({ error: 'No file uploaded' });
+        if (!file) {
+            return res.status(400).json({
+                error: 'No file uploaded',
+                debug: {
+                    contentType: req.headers['content-type'],
+                    bodyKeys: Object.keys(req.body),
+                    multerFile: !!req.file
+                }
+            });
+        }
 
         // 4.2 Digital Signature using Hash:
         // Demonstrating data integrity using hash-based verification.
         const fileHash = computeHash(file.buffer);
+
+        // 5.1 Encoding & Decoding Implementation:
+        // Base64-encode the SHA-256 hash for safe transport and display.
+        const fileHashBase64 = encodeBase64(fileHash);
+        // Decode to verify round-trip correctness
+        const fileHashDecoded = decodeBase64(fileHashBase64);
+        console.log('Hash (hex):', fileHash);
+        console.log('Hash (base64-encoded):', fileHashBase64);
+        console.log('Hash (base64-decoded back):', fileHashDecoded);
 
         // 3.2 Encryption & Decryption:
         // Implement secure encryption using AES-256-GCM.
@@ -136,7 +162,14 @@ router.post('/:id/submit', authenticateToken, authorizeRole(['student']), upload
 
         console.log('Submission Successful:', submission);
 
-        res.json({ message: `Assignment submitted securely (Attempt ${count + 1}/3)`, submissionId: submission._id });
+        res.json({
+            message: `Assignment submitted securely (Attempt ${count + 1}/3)`,
+            submissionId: submission._id,
+            integrity: {
+                sha256: fileHash,
+                sha256_base64: fileHashBase64  // 5.1 Base64 encoded hash for display
+            }
+        });
     } catch (err) {
         console.error('Submission Error:', err);
         res.status(500).json({ error: err.message });
@@ -148,8 +181,19 @@ router.get('/:id/my-submission', authenticateToken, authorizeRole(['student']), 
     const assignmentId = req.params.id;
     try {
         const submissions = await Submission.find({ assignment_id: assignmentId, student_id: req.user.id })
+            .populate('student_id', 'username')
             .sort({ submitted_at: -1 });
-        res.json(submissions);
+
+        // Transform to include username at top level for consistency
+        const results = submissions.map(sub => {
+            const subObj = sub.toJSON();
+            return {
+                ...subObj,
+                username: sub.student_id ? sub.student_id.username : 'You'
+            };
+        });
+
+        res.json(results);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -171,7 +215,6 @@ router.get('/:id/submissions', authenticateToken, authorizeRole(['teacher', 'adm
         const seenStudents = new Set();
 
         for (const sub of submissions) {
-            // Safety check for deleted users
             if (!sub.student_id) continue;
 
             const studentId = sub.student_id._id
@@ -181,11 +224,17 @@ router.get('/:id/submissions', authenticateToken, authorizeRole(['teacher', 'adm
             if (!seenStudents.has(studentId)) {
                 seenStudents.add(studentId);
 
+                // Count total attempts for this student to show to teacher
+                const studentAttemptCount = submissions.filter(s =>
+                    (s.student_id._id ? s.student_id._id.toString() : s.student_id.toString()) === studentId
+                ).length;
+
                 const subObj = sub.toJSON();
                 uniqueSubmissions.push({
                     ...subObj,
                     student_id: studentId,
-                    username: sub.student_id.username || 'Unknown'
+                    username: sub.student_id.username || 'Unknown',
+                    attemptNumber: studentAttemptCount
                 });
             }
         }
@@ -201,7 +250,8 @@ router.get('/:id/submissions', authenticateToken, authorizeRole(['teacher', 'adm
 // 3.2 Encryption & Decryption:
 // Decrypting the file for authorized download.
 // Verifying Integrity (Digital Signature Check)
-router.get('/download/:submissionId', authenticateToken, authorizeRole(['teacher', 'admin']), async (req, res) => {
+// router.get('/download/:submissionId', authenticateToken, authorizeRole(['teacher', 'admin']), async (req, res) => {
+router.get('/download/:submissionId', authenticateToken, async (req, res) => {
     const submissionId = req.params.submissionId;
     console.log('Download initiated for:', submissionId);
 
@@ -213,6 +263,11 @@ router.get('/download/:submissionId', authenticateToken, authorizeRole(['teacher
         }
 
         console.log('Found submission:', submission.filename, submission.encrypted_path);
+
+        // Security Check: Only teacher, admin, OR the student who submitted it can download
+        if (req.user.role !== 'teacher' && req.user.role !== 'admin' && submission.student_id.toString() !== req.user.id) {
+            return res.status(403).json({ error: 'Unauthorized to download this file' });
+        }
 
         // Read Encrypted File
         if (!fs.existsSync(submission.encrypted_path)) {
