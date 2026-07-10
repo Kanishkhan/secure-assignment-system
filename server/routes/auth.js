@@ -4,9 +4,14 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const speakeasy = require('speakeasy');
 const qrcode = require('qrcode');
-const User = require('../models/User'); // [MODIFY] Mongoose Model
+const User = require('../models/User');
 
-const SECRET_KEY = process.env.JWT_SECRET;
+// Read JWT secret lazily at runtime so dotenv is always loaded first
+const getSecret = () => {
+    const secret = process.env.JWT_SECRET;
+    if (!secret) throw new Error('JWT_SECRET environment variable is not set');
+    return secret;
+};
 
 // 1. REGISTER (Salted Hashing)
 // 1.1 Single-Factor Authentication:
@@ -21,7 +26,7 @@ router.post('/register', async (req, res) => {
     // NIST recommended: high work factor. Async bcrypt handles salt generation automatically.
     // Salt is stored as part of the hash string in bcrypt format.
     try {
-        const hashedPassword = await bcrypt.hash(password, 12);
+        const hashedPassword = await bcrypt.hash(password, 10); // 10 rounds: secure & fast
 
         const newUser = await User.create({
             username,
@@ -56,10 +61,11 @@ router.post('/login', async (req, res) => {
         }
 
         // Generate JWT (Include mfa_enabled status)
-        const token = jwt.sign({ id: user._id, role: user.role, username: user.username, mfa_enabled: user.mfa_enabled }, SECRET_KEY, { expiresIn: '1h' });
+        const token = jwt.sign({ id: user._id, role: user.role, username: user.username, mfa_enabled: user.mfa_enabled }, getSecret(), { expiresIn: '1h' });
         res.json({ token, role: user.role, mfaRequired: false });
     } catch (err) {
-        res.status(500).json({ error: 'Login failed' });
+        console.error('Login error:', err.message);
+        res.status(500).json({ error: 'Server error during login. Please try again.' });
     }
 });
 
@@ -93,7 +99,7 @@ router.post('/mfa/enable', async (req, res) => {
             if (!user) return res.status(404).json({ error: 'User not found' });
 
             // Generate NEW Token with mfa_enabled: 1
-            const newToken = jwt.sign({ id: user._id, role: user.role, username: user.username, mfa_enabled: true }, SECRET_KEY, { expiresIn: '1h' });
+            const newToken = jwt.sign({ id: user._id, role: user.role, username: user.username, mfa_enabled: true }, getSecret(), { expiresIn: '1h' });
             res.json({ message: 'MFA Enabled', token: newToken });
         } catch (err) {
             res.status(500).json({ error: err.message });
@@ -120,7 +126,7 @@ router.post('/mfa/verify', async (req, res) => {
         });
 
         if (verified) {
-            const jwtToken = jwt.sign({ id: user._id, role: user.role, username: user.username, mfa_enabled: true }, SECRET_KEY, { expiresIn: '1h' });
+            const jwtToken = jwt.sign({ id: user._id, role: user.role, username: user.username, mfa_enabled: true }, getSecret(), { expiresIn: '1h' });
             res.json({ token: jwtToken, role: user.role, success: true });
         } else {
             res.status(401).json({ error: 'Invalid MFA Code' });
@@ -135,7 +141,7 @@ const { authenticateToken, authorizeRole } = require('../middleware/auth');
 // 5. ADMIN: Get All Users
 router.get('/users', authenticateToken, authorizeRole(['admin']), async (req, res) => {
     try {
-        const users = await User.find({}, 'username email role mfa_enabled');
+        const users = await User.find({}, '_id username email role mfa_enabled');
         res.json(users);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -149,8 +155,9 @@ router.delete('/users/:id', authenticateToken, authorizeRole(['admin']), async (
     if (userId === req.user.id) return res.status(400).json({ error: 'Cannot delete yourself' });
 
     try {
-        await User.findByIdAndDelete(userId);
-        res.json({ message: 'User deleted' });
+        const deleted = await User.findByIdAndDelete(userId);
+        if (!deleted) return res.status(404).json({ error: 'User not found' });
+        res.json({ message: 'User deleted successfully' });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

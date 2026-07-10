@@ -1,12 +1,13 @@
+require('dotenv').config(); // MUST be first — loads .env before any module reads process.env
+
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
-const path = require('path');
-const connectDB = require('./database/db'); // [MODIFY]
+const connectDB = require('./database/db');
 const authRoutes = require('./routes/auth');
 const assignmentRoutes = require('./routes/assignments');
-
-require('dotenv').config();
+const analyticsRoutes = require('./routes/analytics');
+const similarityRoutes = require('./routes/similarity');
 
 const rateLimit = require('express-rate-limit');
 
@@ -23,16 +24,25 @@ const limiter = rateLimit({
 
 // Security Middleware
 app.use(helmet()); // Sets various HTTP headers for security
+const allowedOrigins = [
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'http://localhost:5175',
+    ...(process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',') : [])
+];
+
 app.use(cors({
     origin: function (origin, callback) {
-        // Allow local dev, the main production URL, and any Vercel preview URLs
-        if (!origin || 
-            origin === "http://localhost:5173" || 
-            origin.includes("secure-assignment-system") && origin.includes("vercel.app")
+        // Allow requests with no origin (mobile apps, curl, etc.)
+        if (!origin) return callback(null, true);
+        // Allow any configured origin or Vercel preview URLs
+        if (
+            allowedOrigins.includes(origin) ||
+            (origin.includes('secure-assignment-system') && origin.includes('vercel.app'))
         ) {
             callback(null, true);
         } else {
-            callback(new Error('Not allowed by CORS'));
+            callback(new Error('Not allowed by CORS: ' + origin));
         }
     },
     credentials: true
@@ -40,15 +50,14 @@ app.use(cors({
 app.use(express.json());
 app.use(limiter); // Apply rate limiting to all requests
 
-// Initialize Database
-connectDB(); // [MODIFY]
+connectDB();
 
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/assignments', assignmentRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/similarity', similarityRoutes);
 
-// Serve uploads (securely - usually you wouldn't serve this static for sensitive files, but for demo we will control via routes)
-// app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Root Route (Health Check)
 app.get('/', (req, res) => {

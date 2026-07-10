@@ -7,11 +7,15 @@ import logo from '../assets/logo.png';
 
 const Dashboard = () => {
     const { user, token, logout, login } = useAuth();
-    // ...
     const [mfaSetup, setMfaSetup] = useState(null);
     const [mfaToken, setMfaToken] = useState('');
     const [users, setUsers] = useState([]);
     const [assignments, setAssignments] = useState([]);
+    const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+    const [deleteLoading, setDeleteLoading] = useState(false);
+    const [deleteError, setDeleteError] = useState('');
+    const [confirmDeleteAssignmentId, setConfirmDeleteAssignmentId] = useState(null);
+    const [assignmentDeleteError, setAssignmentDeleteError] = useState('');
 
     useEffect(() => {
         fetchAssignments();
@@ -30,14 +34,17 @@ const Dashboard = () => {
     };
 
     const deleteUser = async (id) => {
-        if (!window.confirm('Are you sure you want to delete this user?')) return;
+        if (!id) { setDeleteError('Cannot identify user. Please refresh.'); return; }
+        setDeleteLoading(true);
+        setDeleteError('');
         try {
-            await api.delete(`/api/auth/users/${id}`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await api.delete(`/api/auth/users/${id}`);
+            setConfirmDeleteId(null);
             fetchUsers();
         } catch (error) {
-            alert('Failed to delete user');
+            setDeleteError(error.response?.data?.error || 'Failed to delete user. Please try again.');
+        } finally {
+            setDeleteLoading(false);
         }
     };
 
@@ -53,18 +60,16 @@ const Dashboard = () => {
     };
 
     const handleDeleteAssignment = async (id) => {
-        if (!window.confirm('Delete this assignment? This will also delete all student submissions for this assignment.')) return;
+        setAssignmentDeleteError('');
         try {
-            await api.delete(`/api/assignments/${id}`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            setAssignments(assignments.filter(a => a.id !== id));
+            await api.delete(`/api/assignments/${id}`);
+            setConfirmDeleteAssignmentId(null);
+            setAssignments(prev => prev.filter(a => (a._id || a.id) !== id));
         } catch (error) {
-            alert(error.response?.data?.error || 'Failed to delete assignment');
+            setAssignmentDeleteError(error.response?.data?.error || 'Failed to delete assignment.');
+            setConfirmDeleteAssignmentId(null);
         }
     };
-
-    // ... (MFA functions remain same)
 
     const setupMFA = async () => {
         const res = await api.post('/api/auth/mfa/setup');
@@ -188,8 +193,29 @@ const Dashboard = () => {
                             )}
                         </Card>
 
+                        {(user?.role === 'admin' || user?.role === 'teacher') && (
+                            <Card className="p-6 h-fit text-center border-emerald-500/20 bg-emerald-500/5 group hover:bg-emerald-500/10 transition-colors">
+                                <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                                </div>
+                                <h3 className="text-white font-bold text-lg mb-2">Analytics Hub</h3>
+                                <p className="text-slate-400 text-sm mb-4">View comprehensive statistics, plagiarism distributions, and download PDF reports.</p>
+                                <Link to="/analytics">
+                                    <Button className="w-full bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-500/20">Open Dashboard</Button>
+                                </Link>
+                            </Card>
+                        )}
+
                         {user?.role === 'admin' && (
                             <Card title="User Management" className="h-fit">
+                                {/* Error banner */}
+                                {deleteError && (
+                                    <div className="mb-3 p-3 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center gap-2 text-red-400 text-sm">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                                        <span>{deleteError}</span>
+                                        <button onClick={() => setDeleteError('')} className="ml-auto text-red-400 hover:text-red-300">✕</button>
+                                    </div>
+                                )}
                                 <div className="overflow-x-auto">
                                     <table className="w-full text-sm text-left">
                                         <thead className="text-xs text-slate-500 uppercase bg-slate-800/50">
@@ -200,8 +226,12 @@ const Dashboard = () => {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {Array.isArray(users) && users.length > 0 ? users.map(u => (
-                                                <tr key={u.id} className="border-b border-slate-800/50 last:border-0 hover:bg-slate-800/30 transition-colors">
+                                            {Array.isArray(users) && users.length > 0 ? users.map(u => {
+                                                const uid = u._id || u.id;
+                                                const isSelf = uid === user?.id;
+                                                const isPendingDelete = confirmDeleteId === uid;
+                                                return (
+                                                <tr key={uid} className={`border-b border-slate-800/50 last:border-0 transition-colors ${isPendingDelete ? 'bg-red-500/10' : 'hover:bg-slate-800/30'}`}>
                                                     <td className="px-4 py-3 font-medium text-slate-300">{u.username}</td>
                                                     <td className="px-4 py-3">
                                                         <span className={`text-xs px-2 py-1 rounded-full border ${u.role === 'admin' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' : u.role === 'teacher' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 'bg-slate-700 text-slate-400 border-slate-600'}`}>
@@ -209,12 +239,37 @@ const Dashboard = () => {
                                                         </span>
                                                     </td>
                                                     <td className="px-4 py-3 text-right">
-                                                        <button onClick={() => deleteUser(u.id)} className="text-red-400 hover:text-red-300 transition-colors">
-                                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
-                                                        </button>
+                                                        {isPendingDelete ? (
+                                                            <span className="flex items-center justify-end gap-2">
+                                                                <span className="text-xs text-red-400">Delete?</span>
+                                                                <button
+                                                                    onClick={() => deleteUser(uid)}
+                                                                    disabled={deleteLoading}
+                                                                    className="text-xs px-2 py-1 bg-red-600 hover:bg-red-500 text-white rounded disabled:opacity-50"
+                                                                >
+                                                                    {deleteLoading ? '...' : 'Yes'}
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => { setConfirmDeleteId(null); setDeleteError(''); }}
+                                                                    className="text-xs px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded"
+                                                                >
+                                                                    No
+                                                                </button>
+                                                            </span>
+                                                        ) : (
+                                                            <button
+                                                                onClick={() => { setDeleteError(''); setConfirmDeleteId(uid); }}
+                                                                disabled={isSelf}
+                                                                title={isSelf ? 'Cannot delete yourself' : `Delete ${u.username}`}
+                                                                className="text-red-400 hover:text-red-300 transition-colors disabled:opacity-25 disabled:cursor-not-allowed"
+                                                            >
+                                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
+                                                            </button>
+                                                        )}
                                                     </td>
                                                 </tr>
-                                            )) : (
+                                                );
+                                            }) : (
                                                 <tr><td colSpan="3" className="text-center py-4 text-slate-500">No users found</td></tr>
                                             )}
                                         </tbody>
@@ -237,9 +292,21 @@ const Dashboard = () => {
                             </div>
 
                             <div className="grid grid-cols-1 gap-4">
+                                {/* Assignment error banner */}
+                                {assignmentDeleteError && (
+                                    <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center gap-2 text-red-400 text-sm">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                                        <span>{assignmentDeleteError}</span>
+                                        <button onClick={() => setAssignmentDeleteError('')} className="ml-auto">✕</button>
+                                    </div>
+                                )}
                                 {Array.isArray(assignments) && assignments.length > 0 ? (
-                                    assignments.map(a => (
-                                        <div key={a.id} className="group bg-slate-800 border border-slate-700 rounded-xl p-5 hover:border-blue-500/50 hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-300 relative">
+                                    assignments.map(a => {
+                                        const aid = a._id || a.id;
+                                        const canDelete = user?.role === 'admin' || a.creator_id === user?.id;
+                                        const isPendingDelete = confirmDeleteAssignmentId === aid;
+                                        return (
+                                        <div key={aid} className={`group bg-slate-800 border rounded-xl p-5 hover:shadow-lg transition-all duration-300 relative ${isPendingDelete ? 'border-red-500/50 bg-red-500/5' : 'border-slate-700 hover:border-blue-500/50 hover:shadow-blue-500/10'}`}>
                                             <div className="flex justify-between items-start mb-2">
                                                 <h3 className="font-bold text-lg text-white group-hover:text-blue-400 transition-colors pr-8">{a.title}</h3>
                                                 {a.deadline && (
@@ -250,25 +317,43 @@ const Dashboard = () => {
                                             </div>
                                             <p className="text-slate-400 text-sm mb-4 line-clamp-2">{a.description}</p>
                                             <div className="flex justify-between items-center mt-4">
-                                                {/* Show Trash Icon ONLY if current user is the Creator */}
-                                                {a.creator_id === user.id ? (
-                                                    <button
-                                                        onClick={() => handleDeleteAssignment(a.id)}
-                                                        className="text-gray-500 hover:text-red-400 text-sm flex items-center gap-1 transition-colors"
-                                                        title="Delete Assignment"
-                                                    >
-                                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
-                                                        <span className="sr-only">Delete</span>
-                                                    </button>
+                                                {canDelete ? (
+                                                    isPendingDelete ? (
+                                                        <span className="flex items-center gap-2">
+                                                            <span className="text-xs text-red-400">Delete assignment + all submissions?</span>
+                                                            <button onClick={() => handleDeleteAssignment(aid)} className="text-xs px-2 py-1 bg-red-600 hover:bg-red-500 text-white rounded">Yes</button>
+                                                            <button onClick={() => setConfirmDeleteAssignmentId(null)} className="text-xs px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded">No</button>
+                                                        </span>
+                                                    ) : (
+                                                        <button
+                                                            onClick={() => { setAssignmentDeleteError(''); setConfirmDeleteAssignmentId(aid); }}
+                                                            className="text-gray-500 hover:text-red-400 text-sm flex items-center gap-1 transition-colors"
+                                                            title="Delete Assignment"
+                                                        >
+                                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
+                                                            <span className="sr-only">Delete</span>
+                                                        </button>
+                                                    )
                                                 ) : <div></div>}
+                                                
+                                                <div className="flex items-center gap-4 ml-auto">
+                                                    {canDelete && (
+                                                        <Link to={`/similarity/${aid}`} className="text-sm font-medium text-orange-400 hover:text-orange-300 flex items-center gap-1 group/link">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                                                            Similarity Report
+                                                        </Link>
+                                                    )}
+                                                    <Link to={`/assignments/${aid}`} className="text-sm font-medium text-blue-400 hover:text-blue-300 flex items-center gap-1 group/link">
+                                                        {user?.role === 'student' ? 'Submit Work' : 'View Submissions'}
+                                                        <span className="group-hover/link:translate-x-1 transition-transform">→</span>
+                                                    </Link>
+                                                </div>
 
-                                                <Link to={`/assignments/${a.id}`} className="text-sm font-medium text-blue-400 hover:text-blue-300 flex items-center gap-1 group/link ml-auto">
-                                                    {user?.role === 'student' ? 'Submit Work' : 'View Submissions'}
-                                                    <span className="group-hover/link:translate-x-1 transition-transform">→</span>
-                                                </Link>
+
                                             </div>
                                         </div>
-                                    ))
+                                        );
+                                    })
                                 ) : (
                                     <div className="text-center py-12 text-slate-500 border-2 border-dashed border-slate-700 rounded-xl">
                                         <p>No assignments found.</p>

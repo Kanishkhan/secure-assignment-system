@@ -15,10 +15,13 @@ const Login = () => {
     const { login } = useAuth();
     const navigate = useNavigate();
     const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
 
     const handleLogin = async (e) => {
         // ...
         e.preventDefault();
+        setError('');
+        setLoading(true);
         try {
             const res = await api.post('/api/auth/login', { username, password });
 
@@ -32,13 +35,21 @@ const Login = () => {
             }
         } catch (err) {
             console.error("Login Error:", err);
-            setError(err.response?.data?.error || 'Login failed. Please try again.');
+            if (!err.response) {
+                setError('Cannot connect to server. Please make sure the backend is running.');
+            } else {
+                setError(err.response?.data?.error || 'Login failed. Please check your credentials and try again.');
+            }
+        } finally {
+            setLoading(false);
         }
     };
 
     // ... handleMfaVerify ...
     const handleMfaVerify = async (e) => {
         e.preventDefault();
+        setError('');
+        setLoading(true);
         try {
             const res = await api.post('/api/auth/mfa/verify', { userId, token: mfaCode });
             if (res.data.success) {
@@ -46,9 +57,12 @@ const Login = () => {
                 navigate('/dashboard');
             }
         } catch (err) {
-            setError('Invalid MFA Code');
+            setError(err.response?.data?.error || 'Invalid MFA Code. Please try again.');
+        } finally {
+            setLoading(false);
         }
     };
+
 
     return (
         <div className="min-h-screen flex bg-slate-900 relative overflow-hidden">
@@ -96,7 +110,14 @@ const Login = () => {
                                 <Input label="Username" value={username} onChange={(e) => setUsername(e.target.value)} required placeholder="Enter your username" />
                                 <Input label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required placeholder="••••••••" />
                                 <div className="pt-2">
-                                    <Button type="submit" className="w-full py-3.5 text-lg shadow-blue-500/25">Sign In</Button>
+                                    <Button type="submit" disabled={loading} className="w-full py-3.5 text-lg shadow-blue-500/25 disabled:opacity-60 disabled:cursor-not-allowed">
+                                        {loading ? (
+                                            <span className="flex items-center justify-center gap-2">
+                                                <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>
+                                                Signing In...
+                                            </span>
+                                        ) : 'Sign In'}
+                                    </Button>
                                 </div>
                                 <p className="mt-6 text-center text-slate-400 text-sm">
                                     Don't have an account? <Link to="/register" className="text-blue-400 hover:text-blue-300 font-medium transition-colors hover:underline">Create Account</Link>
@@ -113,7 +134,14 @@ const Login = () => {
                                     Please enter the 6-digit code from your <br />authenticator app to continue.
                                 </p>
                                 <Input label="Authentication Code" value={mfaCode} onChange={(e) => setMfaCode(e.target.value)} required placeholder="000 000" className="text-center tracking-[0.5em] text-2xl font-mono" />
-                                <Button type="submit" className="w-full py-3.5 mt-4">Verify Identity</Button>
+                                <Button type="submit" disabled={loading} className="w-full py-3.5 mt-4 disabled:opacity-60 disabled:cursor-not-allowed">
+                                    {loading ? (
+                                        <span className="flex items-center justify-center gap-2">
+                                            <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>
+                                            Verifying...
+                                        </span>
+                                    ) : 'Verify Identity'}
+                                </Button>
                                 <button type="button" onClick={() => setStep(1)} className="w-full text-center mt-6 text-sm text-slate-500 hover:text-slate-400 transition-colors">
                                     ← Back to Login
                                 </button>

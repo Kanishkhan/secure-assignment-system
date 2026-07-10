@@ -66,15 +66,19 @@ router.post('/', authenticateToken, authorizeRole(['teacher']), async (req, res)
     }
 });
 
-// 2.5 DELETE Assignment (Teacher Only)
-router.delete('/:id', authenticateToken, authorizeRole(['teacher']), async (req, res) => {
+// DELETE Assignment — creator (teacher) or admin
+router.delete('/:id', authenticateToken, authorizeRole(['teacher', 'admin']), async (req, res) => {
     const assignmentId = req.params.id;
 
     try {
         const assignment = await Assignment.findById(assignmentId);
         if (!assignment) return res.status(404).json({ error: 'Assignment not found' });
 
-        if (assignment.creator_id.toString() !== req.user.id) {
+        // Admin can delete any assignment; teacher can only delete their own
+        const isAdmin = req.user.role === 'admin';
+        const isCreator = assignment.creator_id && assignment.creator_id.toString() === req.user.id;
+
+        if (!isAdmin && !isCreator) {
             return res.status(403).json({ error: 'You can only delete your own assignments' });
         }
 
@@ -297,24 +301,3 @@ router.get('/download/:submissionId', authenticateToken, async (req, res) => {
 });
 
 module.exports = router;
-
-
-
-// Authorization – Access Control
-//
-// Access Control Model :
-// This system implements an Access Control List (ACL) using Role-Based Access Control.
-// Subjects: Admin, Teacher, Student
-// Objects: Assignments, Submissions, Files
-// Access rules are enforced using authenticateToken and authorizeRole middleware.
-//
-// Policy Definition & Justification :
-// Admin: Can view all submissions and download files for monitoring and auditing.
-// Teacher: Can create/delete assignments and view/download student submissions.
-// Student: Can view assignments and submit files before the deadline.
-// Access is restricted to ensure confidentiality, integrity, and role separation.
-//
-// Implementation of Access Control (3 Marks):
-// Access permissions are enforced programmatically at route level.
-// Each API endpoint validates user role before allowing actions
-// such as assignment creation, submission, viewing, or download.
