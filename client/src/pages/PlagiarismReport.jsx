@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../axiosConfig';
 import { useAuth } from '../context/AuthContext';
 import { Card, Button } from '../components/UI';
 import logo from '../assets/logo.png';
@@ -22,7 +22,7 @@ const PlagiarismReport = () => {
     const fetchReport = async () => {
         try {
             setLoading(true);
-            const res = await axios.get(`http://localhost:5000/api/teacher/plagiarism/${assignmentId}`, {
+            const res = await api.get(`/api/teacher/plagiarism/${assignmentId}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setSummary(res.data.summary);

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import api from '../axiosConfig';
+import api, { API_BASE_URL } from '../axiosConfig';
 import { useAuth } from '../context/AuthContext';
 import { Button, Card, Input } from '../components/UI';
 
@@ -76,8 +76,7 @@ const AssignmentDetail = () => {
         formData.append('submission', file);
 
         try {
-            const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-            const uploadUrl = `${baseUrl}/api/assignments/${id}/submit`;
+            const uploadUrl = `${API_BASE_URL}/api/assignments/${id}/submit`;
             console.log("Uploading to:", uploadUrl);
 
             const response = await fetch(uploadUrl, {

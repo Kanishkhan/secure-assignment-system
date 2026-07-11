@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../axiosConfig';
 import { useAuth } from '../context/AuthContext';
 import { Card, Button } from '../components/UI';
 import logo from '../assets/logo.png';
@@ -27,7 +27,7 @@ const CompareSubmissions = () => {
     const fetchComparison = async () => {
         try {
             setLoading(true);
-            const res = await axios.get(`http://localhost:5000/api/teacher/compare/${sub1}/${sub2}`, {
+            const res = await api.get(`/api/teacher/compare/${sub1}/${sub2}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setData(res.data);

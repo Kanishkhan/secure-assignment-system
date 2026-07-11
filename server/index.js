@@ -28,6 +28,9 @@ app.use(cors({
         // Allow local dev, the main production URL, and any Vercel preview URLs
         if (!origin || 
             origin === "http://localhost:5173" || 
+            origin === "http://localhost:5174" ||
+            origin === "http://127.0.0.1:5173" ||
+            origin === "http://127.0.0.1:5174" ||
             origin.includes("secure-assignment-system") && origin.includes("vercel.app")
         ) {
             callback(null, true);

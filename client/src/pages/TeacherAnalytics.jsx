@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../axiosConfig';
+import { jsPDF } from 'jspdf';
 import { useAuth } from '../context/AuthContext';
 import { Card, Button } from '../components/UI';
 import logo from '../assets/logo.png';
@@ -64,7 +65,7 @@ const TeacherAnalytics = () => {
     const fetchAnalytics = async () => {
         try {
             setLoading(true);
-            const res = await axios.get('http://localhost:5000/api/teacher/analytics', {
+            const res = await api.get('/api/teacher/analytics', {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setAnalytics(res.data);
@@ -79,7 +80,7 @@ const TeacherAnalytics = () => {
 
     const handleReviewStatusUpdate = async (subId, newStatus) => {
         try {
-            await axios.post(`http://localhost:5000/api/teacher/review/${subId}`, { status: newStatus }, {
+            await api.post(`/api/teacher/review/${subId}`, { status: newStatus }, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             // Reload analytics to keep dashboard in sync
@@ -125,51 +126,134 @@ const TeacherAnalytics = () => {
     };
 
     const handleDownloadPDF = () => {
-        const triggerHtml2Pdf = () => {
-            const element = document.getElementById('analytics-root') || document.body;
-            
-            // Query elements to hide
-            const elementsToHide = document.querySelectorAll('.print\\:hidden');
-            elementsToHide.forEach(el => {
-                el.setAttribute('data-prev-display', el.style.display);
-                el.style.display = 'none';
-            });
+        if (!analytics) return;
 
-            const opt = {
-                margin:       [0.2, 0.2],
-                filename:     'Teacher_Analytics_Report.pdf',
-                image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { 
-                    scale: 1.5, 
-                    useCORS: true, 
-                    backgroundColor: '#0f172a',
-                    scrollY: 0,
-                    scrollX: 0,
-                    windowScrollY: 0,
-                    windowScrollX: 0
-                },
-                jsPDF:        { unit: 'in', format: 'letter', orientation: 'landscape' }
+        try {
+            const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const pageHeight = doc.internal.pageSize.getHeight();
+            const margin = 36;
+            const lineHeight = 18;
+            let y = margin;
+
+            const safe = (value) => value === undefined || value === null || value === '' ? 'N/A' : String(value);
+            const addPageIfNeeded = (extra = lineHeight) => {
+                if (y + extra > pageHeight - margin) {
+                    doc.addPage();
+                    y = margin;
+                }
             };
-            
-            window.html2pdf().from(element).set(opt).save().then(() => {
-                elementsToHide.forEach(el => {
-                    el.style.display = el.getAttribute('data-prev-display') || '';
+            const addTitle = (title) => {
+                addPageIfNeeded(32);
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(13);
+                doc.text(title, margin, y);
+                y += 22;
+                doc.setDrawColor(80, 92, 120);
+                doc.line(margin, y - 8, pageWidth - margin, y - 8);
+            };
+            const addTextLine = (label, value) => {
+                addPageIfNeeded();
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(9);
+                doc.text(`${label}:`, margin, y);
+                doc.setFont('helvetica', 'normal');
+                doc.text(safe(value), margin + 135, y);
+                y += lineHeight;
+            };
+            const addTable = (headers, rows, widths) => {
+                addPageIfNeeded(34);
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(8);
+                let x = margin;
+                headers.forEach((header, index) => {
+                    doc.text(header, x, y);
+                    x += widths[index];
                 });
-            }).catch(err => {
-                console.error(err);
-                elementsToHide.forEach(el => {
-                    el.style.display = el.getAttribute('data-prev-display') || '';
-                });
-            });
-        };
+                y += 14;
+                doc.setDrawColor(190, 190, 190);
+                doc.line(margin, y - 8, pageWidth - margin, y - 8);
 
-        if (!window.html2pdf) {
-            const script = document.createElement('script');
-            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
-            script.onload = triggerHtml2Pdf;
-            document.body.appendChild(script);
-        } else {
-            triggerHtml2Pdf();
+                doc.setFont('helvetica', 'normal');
+                rows.forEach((row) => {
+                    addPageIfNeeded(26);
+                    x = margin;
+                    let rowHeight = 14;
+                    row.forEach((cell, index) => {
+                        const wrapped = doc.splitTextToSize(safe(cell), widths[index] - 8);
+                        doc.text(wrapped.slice(0, 2), x, y);
+                        rowHeight = Math.max(rowHeight, Math.min(wrapped.length, 2) * 12);
+                        x += widths[index];
+                    });
+                    y += rowHeight + 5;
+                });
+                y += 8;
+            };
+
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(20);
+            doc.text('Teacher Analytics Report', margin, y);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(9);
+            doc.text(`Generated: ${new Date().toLocaleString()}`, pageWidth - margin - 170, y);
+            y += 30;
+
+            addTitle('Platform Summary');
+            const cards = analytics.cards || {};
+            [
+                ['Assignments', cards.totalAssignments],
+                ['Students', cards.totalStudents],
+                ['Submissions', cards.totalSubmissions],
+                ['Submission Rate', `${safe(cards.submissionRate)}%`],
+                ['Average Similarity', `${safe(cards.averageSimilarity)}%`],
+                ['Duplicate Files', cards.duplicateFiles],
+                ['Late Uploads', cards.lateSubmissions],
+                ['Pending Evaluations', cards.pendingEvaluations]
+            ].forEach(([label, value]) => addTextLine(label, value));
+
+            addTitle('Assignment Health');
+            addTable(
+                ['Assignment', 'Submissions', 'Avg Similarity', 'Risk', 'Reviewed'],
+                (analytics.assignmentHealth || []).slice(0, 12).map((item) => [
+                    item.title,
+                    item.submissions,
+                    `${safe(item.avgSimilarity)}%`,
+                    item.riskStatus,
+                    item.teacherReviewed
+                ]),
+                [210, 90, 100, 110, 90]
+            );
+
+            addTitle('Similarity Pairs');
+            addTable(
+                ['Assignment', 'Student A', 'Student B', 'Similarity', 'Verdict'],
+                (analytics.duplicatePairs || []).slice(0, 14).map((item) => [
+                    item.assignmentTitle,
+                    item.studentName,
+                    item.matchedStudentName,
+                    `${safe(item.similarityScore)}%`,
+                    item.recommendation
+                ]),
+                [210, 120, 120, 80, 120]
+            );
+
+            addTitle('Recent Audit Events');
+            addTable(
+                ['Time', 'User', 'Role', 'Action', 'Status'],
+                (analytics.timeline || []).slice(0, 14).map((item) => [
+                    item.timestamp ? new Date(item.timestamp).toLocaleString() : 'N/A',
+                    item.username,
+                    item.role,
+                    item.action,
+                    item.status
+                ]),
+                [145, 120, 80, 190, 80]
+            );
+
+            doc.save('Teacher_Analytics_Report.pdf');
+        } catch (err) {
+            console.error('Failed to generate analytics PDF:', err);
+            alert('Failed to generate PDF report.');
         }
     };
 
