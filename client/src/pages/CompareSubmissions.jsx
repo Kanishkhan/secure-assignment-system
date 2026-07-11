@@ -3,9 +3,8 @@ import { useParams, Link } from 'react-router-dom';
 import api from '../axiosConfig';
 import { Card, Button, Input } from '../components/UI';
 import { Download, AlertTriangle, FileText, CheckCircle, Search, ChevronLeft, ChevronRight, Activity } from 'lucide-react';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
 import logo from '../assets/logo.png';
+import jsPDF from 'jspdf';
 
 const CompareSubmissions = () => {
     const { id, studentA, studentB } = useParams();
@@ -13,6 +12,7 @@ const CompareSubmissions = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
+    const [exporting, setExporting] = useState(false);
     
     // Sync scrolling
     const paneARef = useRef(null);
@@ -44,18 +44,112 @@ const CompareSubmissions = () => {
         fetchComparison();
     }, [id, studentA, studentB]);
 
-    const downloadPDF = () => {
-        const reportElement = document.getElementById('report-content');
-        if (!reportElement) return;
-        
-        html2canvas(reportElement, { scale: 2 }).then((canvas) => {
-            const imgData = canvas.toDataURL('image/png');
+    const normalizePdfText = (value) => String(value || '')
+        .replace(/[\u201c\u201d]/g, '"')
+        .replace(/[\u2018\u2019]/g, "'")
+        .replace(/[\u2013\u2014]/g, '-')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    const safeFilenamePart = (value) => normalizePdfText(value)
+        .replace(/[<>:"/\\|?*]+/g, '_')
+        .replace(/\s+/g, '_')
+        .slice(0, 60) || 'report';
+
+    const downloadPDF = async () => {
+        setExporting(true);
+        try {
             const pdf = new jsPDF('p', 'mm', 'a4');
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-            pdf.save(`Plagiarism_Report_${data.studentA.name}_vs_${data.studentB.name}.pdf`);
-        });
+            const pageWidth = pdf.internal.pageSize.getWidth();
+            const pageHeight = pdf.internal.pageSize.getHeight();
+            const margin = 14;
+            const lineHeight = 6;
+            let y = 18;
+
+            const addPageIfNeeded = (height = lineHeight) => {
+                if (y + height > pageHeight - margin) {
+                    pdf.addPage();
+                    y = margin;
+                }
+            };
+
+            const addText = (text, options = {}) => {
+                const {
+                    size = 10,
+                    style = 'normal',
+                    color = [30, 41, 59],
+                    indent = 0,
+                    gap = 2
+                } = options;
+                pdf.setFont('helvetica', style);
+                pdf.setFontSize(size);
+                pdf.setTextColor(...color);
+                const lines = pdf.splitTextToSize(normalizePdfText(text), pageWidth - (margin * 2) - indent);
+                lines.forEach((line) => {
+                    addPageIfNeeded(lineHeight);
+                    pdf.text(line, margin + indent, y);
+                    y += lineHeight;
+                });
+                y += gap;
+            };
+
+            const addMetric = (label, value) => {
+                pdf.setFillColor(241, 245, 249);
+                pdf.roundedRect(margin, y, pageWidth - margin * 2, 12, 2, 2, 'F');
+                pdf.setFont('helvetica', 'bold');
+                pdf.setFontSize(10);
+                pdf.setTextColor(71, 85, 105);
+                pdf.text(label, margin + 4, y + 7.5);
+                pdf.setTextColor(15, 23, 42);
+                pdf.text(String(value), pageWidth - margin - 4, y + 7.5, { align: 'right' });
+                y += 16;
+            };
+
+            const { analysis, studentA: aData, studentB: bData } = data;
+
+            pdf.setFillColor(15, 23, 42);
+            pdf.rect(0, 0, pageWidth, 34, 'F');
+            pdf.setTextColor(255, 255, 255);
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(18);
+            pdf.text('Similarity Analysis Report', margin, 17);
+            pdf.setFont('helvetica', 'normal');
+            pdf.setFontSize(10);
+            pdf.text(`Generated: ${new Date().toLocaleString()}`, margin, 25);
+            y = 44;
+
+            addText(`Assignment ID: ${id}`, { size: 9, color: [100, 116, 139] });
+            addText(`${aData.name} (${aData.filename}) vs ${bData.name} (${bData.filename})`, { size: 12, style: 'bold', color: [15, 23, 42], gap: 6 });
+
+            addMetric('Overall Similarity', `${analysis.overallSimilarity}%`);
+            addMetric('Risk Level', analysis.riskLevel);
+            addMetric('Matched Sentences', analysis.matchedSentencesCount);
+            addMetric('Unique Content', `${analysis.uniqueContentPercentage}%`);
+
+            addText('Document Statistics', { size: 13, style: 'bold', color: [37, 99, 235], gap: 3 });
+            addText(`${aData.name}: ${analysis.stats.totalWordsA} words`, { indent: 4 });
+            addText(`${bData.name}: ${analysis.stats.totalWordsB} words`, { indent: 4, gap: 6 });
+
+            addText('Detailed Sentence Matches', { size: 13, style: 'bold', color: [220, 38, 38], gap: 3 });
+
+            if (!analysis.matchedSentencesList.length) {
+                addText('No highly similar sentences found.', { indent: 4 });
+            } else {
+                analysis.matchedSentencesList.forEach((match, index) => {
+                    addPageIfNeeded(28);
+                    addText(`Match #${index + 1} - ${match.similarity}% similar`, { size: 11, style: 'bold', color: [15, 23, 42], gap: 1 });
+                    addText(`${aData.name}: ${match.textA}`, { indent: 4, color: [30, 64, 175], gap: 1 });
+                    addText(`${bData.name}: ${match.textB}`, { indent: 4, color: [126, 34, 206], gap: 4 });
+                });
+            }
+
+            pdf.save(`Plagiarism_Report_${safeFilenamePart(aData.name)}_vs_${safeFilenamePart(bData.name)}.pdf`);
+        } catch (err) {
+            console.error('PDF Generation Failed', err);
+            alert('Failed to generate PDF report.');
+        } finally {
+            setExporting(false);
+        }
     };
 
     if (loading) return <div className="min-h-screen bg-slate-900 flex items-center justify-center text-blue-400">Analyzing sentences... (This may take a moment)</div>;
@@ -103,13 +197,13 @@ const CompareSubmissions = () => {
                 
                 {/* Header Actions */}
                 <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-                    <div className="flex items-center gap-4">
+                    <Link to="/dashboard" className="flex items-center gap-4 hover:opacity-90 transition-opacity">
                         <img src={logo} alt="EduLock" className="w-10 h-10 object-contain" />
                         <div>
                             <h1 className="text-2xl font-bold text-white tracking-tight">Similarity Analysis</h1>
                             <p className="text-slate-400 text-sm">Sentence-level Plagiarism Detection</p>
                         </div>
-                    </div>
+                    </Link>
                     <div className="flex items-center gap-4">
                         <div className="relative">
                             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -121,11 +215,14 @@ const CompareSubmissions = () => {
                                 className="pl-9 pr-4 py-2 bg-slate-900 border border-slate-800 rounded-lg text-sm text-slate-200 focus:ring-2 focus:ring-blue-500 outline-none w-64 transition-all"
                             />
                         </div>
-                        <Button variant="outline" onClick={downloadPDF} className="flex items-center gap-2">
-                            <Download className="w-4 h-4" /> Download Report
+                        <Button variant="outline" onClick={downloadPDF} disabled={exporting} className="flex items-center gap-2">
+                            <Download className="w-4 h-4" /> {exporting ? 'Preparing PDF...' : 'Download Report'}
                         </Button>
                         <Link to={`/similarity/${id}`}>
-                            <Button className="bg-blue-600 hover:bg-blue-700 text-white">Back to Dashboard</Button>
+                            <Button variant="outline" className="border-slate-700 hover:bg-slate-800 text-slate-300">Back to Report</Button>
+                        </Link>
+                        <Link to="/dashboard">
+                            <Button className="bg-blue-600 hover:bg-blue-700 text-white">Dashboard</Button>
                         </Link>
                     </div>
                 </div>

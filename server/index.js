@@ -45,7 +45,8 @@ app.use(cors({
             callback(new Error('Not allowed by CORS: ' + origin));
         }
     },
-    credentials: true
+    credentials: true,
+    exposedHeaders: ['Content-Disposition', 'Content-Type', 'Content-Length']
 }));
 app.use(express.json());
 app.use(limiter); // Apply rate limiting to all requests

@@ -292,8 +292,47 @@ router.get('/download/:submissionId', authenticateToken, async (req, res) => {
             console.warn('Integrity Check Failed!');
         }
 
-        res.setHeader('Content-Disposition', `attachment; filename="${submission.filename}"`);
-        res.send(decryptedBuffer);
+        // PDF validation and MIME type resolution
+        const isPDF = decryptedBuffer.length >= 5 && decryptedBuffer.slice(0, 5).toString('utf-8') === '%PDF-';
+        let mimeType = 'application/octet-stream';
+        let downloadFilename = submission.filename;
+
+        if (isPDF) {
+            mimeType = 'application/pdf';
+            if (!downloadFilename.toLowerCase().endsWith('.pdf')) {
+                downloadFilename += '.pdf';
+            }
+        } else {
+            const ext = downloadFilename.split('.').pop().toLowerCase();
+            if (ext === 'docx') {
+                mimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+            } else if (ext === 'pptx') {
+                mimeType = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
+            } else if (ext === 'xlsx') {
+                mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+            } else if (ext === 'pdf') {
+                mimeType = 'application/pdf';
+            } else if (ext === 'png') {
+                mimeType = 'image/png';
+            } else if (ext === 'jpg' || ext === 'jpeg') {
+                mimeType = 'image/jpeg';
+            } else if (ext === 'txt') {
+                mimeType = 'text/plain';
+            }
+        }
+
+        // Log the file details as requested
+        console.log("Original filename:", submission.filename);
+        console.log("Stored filename:", path.basename(submission.encrypted_path));
+        console.log("MIME type:", mimeType);
+        console.log("Decrypted buffer size:", decryptedBuffer.length);
+        console.log("PDF signature:", decryptedBuffer.subarray(0, 5).toString());
+
+        res.setHeader("Access-Control-Expose-Headers", "Content-Disposition");
+        res.setHeader('Content-Type', mimeType);
+        res.setHeader('Content-Disposition', `attachment; filename="${downloadFilename}"`);
+        res.setHeader('Content-Length', decryptedBuffer.length);
+        res.status(200).send(decryptedBuffer);
     } catch (e) {
         console.error('Download/Decryption Error:', e);
         res.status(500).json({ error: 'Decryption failed: ' + e.message });

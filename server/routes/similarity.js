@@ -8,6 +8,7 @@ const { authenticateToken, authorizeRole } = require('../middleware/auth');
 const { decryptFile, SYSTEM_KEY } = require('../utils/crypto');
 const mammoth = require('mammoth');
 const pdfParse = require('pdf-parse');
+const officeParser = require('officeparser');
 const { analyzePlagiarism } = require('../utils/plagiarismAnalyzer');
 
 const extractText = async (submission) => {
@@ -18,14 +19,29 @@ const extractText = async (submission) => {
         const decryptedBuffer = decryptFile(encrypted, SYSTEM_KEY, iv, tag);
         
         const ext = submission.filename.split('.').pop().toLowerCase();
+        const textExtensions = ['txt', 'js', 'jsx', 'ts', 'tsx', 'py', 'java', 'cpp', 'c', 'h', 'cs', 'html', 'css', 'json', 'md', 'sql', 'xml', 'sh'];
+
         if (ext === 'pdf') {
             const data = await pdfParse(decryptedBuffer);
-            return data.text;
+            return data.text || '';
         } else if (ext === 'docx') {
-            const result = await mammoth.extractRawText({ buffer: decryptedBuffer });
-            return result.value;
+            try {
+                const result = await mammoth.extractRawText({ buffer: decryptedBuffer });
+                return result.value || '';
+            } catch (err) {
+                const result = await officeParser.parseOffice(decryptedBuffer, { fileType: 'docx' });
+                return typeof result === 'string' ? result : (result && typeof result.toText === 'function' ? result.toText() : '');
+            }
+        } else if (ext === 'pptx') {
+            const result = await officeParser.parseOffice(decryptedBuffer, { fileType: 'pptx' });
+            return typeof result === 'string' ? result : (result && typeof result.toText === 'function' ? result.toText() : '');
+        } else if (ext === 'xlsx') {
+            const result = await officeParser.parseOffice(decryptedBuffer, { fileType: 'xlsx' });
+            return typeof result === 'string' ? result : (result && typeof result.toText === 'function' ? result.toText() : '');
+        } else if (textExtensions.includes(ext)) {
+            return decryptedBuffer.toString('utf-8') || '';
         } else {
-            return decryptedBuffer.toString('utf-8');
+            return `[Unsupported file format for text extraction: ${ext.toUpperCase()}]`;
         }
     } catch(e) {
         console.error("Extraction error for", submission.filename, ":", e.message);

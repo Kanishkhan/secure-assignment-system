@@ -20,7 +20,6 @@ router.get('/dashboard', authenticateToken, authorizeRole(['admin', 'teacher']),
             const totalTeachers = await User.countDocuments({ role: 'teacher' });
             const totalStudents = await User.countDocuments({ role: 'student' });
             const totalAssignments = await Assignment.countDocuments();
-            const totalSubmissions = await Submission.countDocuments();
             
             // Submissions per assignment for chart
             const submissionsPerAssignment = await Submission.aggregate([
@@ -30,6 +29,9 @@ router.get('/dashboard', authenticateToken, authorizeRole(['admin', 'teacher']),
                 { $project: { title: "$assignment.title", submissions: "$count" } }
             ]);
 
+            // Dynamically calculate total active submissions to exclude orphaned submissions of deleted assignments
+            const totalSubmissions = submissionsPerAssignment.reduce((sum, item) => sum + item.submissions, 0);
+            
             responseData = {
                 role: 'admin',
                 stats: {

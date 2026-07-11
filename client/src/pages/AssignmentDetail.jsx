@@ -135,28 +135,22 @@ const AssignmentDetail = () => {
             alert(`Upload Failed: ${error.message}`);
         }
     };
-
-    const handleDownload = async (subId, filename) => {
-        try {
-            console.log("Downloading submission:", subId);
-            const response = await api.get(`/api/assignments/download/${subId}`, {
-                headers: { Authorization: `Bearer ${token}` },
-                responseType: 'blob'
-            });
-
-            const url = window.URL.createObjectURL(new Blob([response.data]));
-            const link = document.createElement('a');
-            link.href = url;
-            link.setAttribute('download', filename);
-            document.body.appendChild(link);
-            link.click();
-            window.URL.revokeObjectURL(url);
-        } catch (error) {
-            console.error("Download error:", error);
-            alert('Download/Decryption failed');
-        }
+    const handleDownload = (subId, filename) => {
+        // Direct browser download — bypasses ALL blob URL / UUID filename issues.
+        // The browser natively reads Content-Disposition from the server response
+        // and uses the real filename (e.g. Chapter3-Problems.pdf).
+        const baseUrl = import.meta.env.VITE_API_URL || '';
+        const downloadUrl = `${baseUrl}/api/assignments/download/${subId}?token=${encodeURIComponent(token)}`;
+        
+        console.log("DOWNLOAD DEBUG - subId:", subId);
+        console.log("DOWNLOAD DEBUG - filename argument:", filename);
+        console.log("DOWNLOAD DEBUG - download URL:", downloadUrl);
+        
+        // window.open triggers a native browser download.
+        // The server sets Content-Disposition: attachment; filename="..." 
+        // so Chrome will use the correct filename, NOT a UUID.
+        window.open(downloadUrl, '_blank');
     };
-
     return (
         <div className="min-h-screen bg-slate-900 text-slate-100 p-8 flex justify-center">
             <div className="w-full max-w-4xl">
@@ -238,7 +232,7 @@ const AssignmentDetail = () => {
 
                                                     <Button
                                                         onClick={() => handleDownload(mySubmissions[0]._id || mySubmissions[0].id, mySubmissions[0].filename)}
-                                                        className="bg-slate-800 hover:bg-emerald-600 border border-slate-700 hover:border-emerald-500 text-white flex items-center gap-2 px-6 py-3 transition-all transform active:scale-95"
+                                                        className="bg-slate-800 hover:bg-emerald-600 border border-slate-700 hover:border-emerald-500 text-white flex items-center gap-2 px-6 py-3 transition-all transform active:scale-95 rounded-xl font-bold text-sm shadow-md"
                                                     >
                                                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                                                         Download & Verify File
@@ -353,7 +347,10 @@ const AssignmentDetail = () => {
                                                         On: {new Date(sub.submitted_at).toLocaleString()}
                                                     </p>
                                                 </div>
-                                                <Button onClick={() => handleDownload(sub._id || sub.id, sub.filename)} className="text-sm py-1.5 px-3 bg-slate-700 hover:bg-blue-600 border border-slate-600 hover:border-blue-500">
+                                                <Button 
+                                                    onClick={() => handleDownload(sub._id || sub.id, sub.filename)}
+                                                    className="text-sm py-1.5 px-3 bg-slate-700 hover:bg-blue-600 border border-slate-600 hover:border-blue-500 rounded text-white font-bold transition-all shadow-md inline-block text-center"
+                                                >
                                                     Decrypt & Download
                                                 </Button>
                                             </div>

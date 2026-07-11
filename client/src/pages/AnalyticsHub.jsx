@@ -3,10 +3,9 @@ import { useAuth } from '../context/AuthContext';
 import api from '../axiosConfig';
 import { Link } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import html2canvas from 'html2canvas';
-import { jsPDF } from 'jspdf';
 import { Card, Button } from '../components/UI';
 import logo from '../assets/logo.png';
+import { jsPDF } from 'jspdf';
 
 const COLORS = ['#8b5cf6', '#3b82f6', '#10b981', '#f59e0b', '#ef4444'];
 
@@ -15,6 +14,7 @@ const AnalyticsHub = () => {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [exporting, setExporting] = useState(false);
     const reportRef = useRef(null);
 
     useEffect(() => {
@@ -33,28 +33,97 @@ const AnalyticsHub = () => {
     };
 
     const downloadPDF = async () => {
-        if (!reportRef.current) return;
-        const button = document.getElementById('download-btn');
-        const backBtn = document.getElementById('back-btn');
-        if (button) button.style.display = 'none'; // hide button from PDF
-        if (backBtn) backBtn.style.display = 'none';
-        
+        setExporting(true);
         try {
-            const canvas = await html2canvas(reportRef.current, { scale: 2, useCORS: true, backgroundColor: '#0f172a' });
-            const imgData = canvas.toDataURL('image/png');
-            
             const pdf = new jsPDF('p', 'mm', 'a4');
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-            
-            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+            const pageWidth = pdf.internal.pageSize.getWidth();
+            const pageHeight = pdf.internal.pageSize.getHeight();
+            const margin = 14;
+            const lineHeight = 7;
+            let y = 18;
+
+            const clean = (value) => String(value ?? '')
+                .replace(/[\u201c\u201d]/g, '"')
+                .replace(/[\u2018\u2019]/g, "'")
+                .replace(/[\u2013\u2014]/g, '-')
+                .replace(/\s+/g, ' ')
+                .trim();
+
+            const addPageIfNeeded = (height = lineHeight) => {
+                if (y + height > pageHeight - margin) {
+                    pdf.addPage();
+                    y = margin;
+                }
+            };
+
+            const addText = (text, options = {}) => {
+                const { size = 10, style = 'normal', color = [30, 41, 59], indent = 0, gap = 2 } = options;
+                pdf.setFont('helvetica', style);
+                pdf.setFontSize(size);
+                pdf.setTextColor(...color);
+                const lines = pdf.splitTextToSize(clean(text), pageWidth - (margin * 2) - indent);
+                lines.forEach((line) => {
+                    addPageIfNeeded();
+                    pdf.text(line, margin + indent, y);
+                    y += lineHeight;
+                });
+                y += gap;
+            };
+
+            const addMetric = (label, value) => {
+                addPageIfNeeded(13);
+                pdf.setFillColor(241, 245, 249);
+                pdf.roundedRect(margin, y, pageWidth - margin * 2, 12, 2, 2, 'F');
+                pdf.setFont('helvetica', 'bold');
+                pdf.setFontSize(10);
+                pdf.setTextColor(71, 85, 105);
+                pdf.text(label, margin + 4, y + 7.5);
+                pdf.setTextColor(15, 23, 42);
+                pdf.text(clean(value), pageWidth - margin - 4, y + 7.5, { align: 'right' });
+                y += 16;
+            };
+
+            pdf.setFillColor(15, 23, 42);
+            pdf.rect(0, 0, pageWidth, 34, 'F');
+            pdf.setTextColor(255, 255, 255);
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(18);
+            pdf.text('EduLock Analytics Report', margin, 17);
+            pdf.setFont('helvetica', 'normal');
+            pdf.setFontSize(10);
+            pdf.text(`Generated: ${new Date().toLocaleString()}`, margin, 25);
+            y = 44;
+
+            addText(`${data?.role || 'User'} view`, { size: 12, style: 'bold', color: [37, 99, 235], gap: 6 });
+
+            if (data?.role === 'admin') {
+                addMetric('Total Users', stats.totalUsers || 0);
+                addMetric('Teachers', stats.totalTeachers || 0);
+                addMetric('Students', stats.totalStudents || 0);
+                addMetric('Assignments', stats.totalAssignments || 0);
+                addMetric('Submissions', stats.totalSubmissions || 0);
+            } else {
+                addMetric('My Assignments', stats.totalAssignments || 0);
+                addMetric('Total Submissions', stats.totalSubmissions || 0);
+                addMetric('Students Engaged', stats.studentsEngaged || 0);
+                addMetric('Average per Assignment', stats.totalAssignments > 0 ? (stats.totalSubmissions / stats.totalAssignments).toFixed(1) : 0);
+            }
+
+            addText('Submissions per Assignment', { size: 13, style: 'bold', color: [37, 99, 235], gap: 3 });
+            if (chartData.length === 0) {
+                addText('No submission data available.', { indent: 4 });
+            } else {
+                chartData.forEach((item, index) => {
+                    addText(`${index + 1}. ${item.title}: ${item.submissions}`, { indent: 4, gap: 1 });
+                });
+            }
+
             pdf.save(`EduLock_Analytics_Report_${new Date().toISOString().split('T')[0]}.pdf`);
         } catch (err) {
             console.error('PDF Generation Failed', err);
             alert('Failed to generate PDF report.');
         } finally {
-            if (button) button.style.display = 'flex';
-            if (backBtn) backBtn.style.display = 'block';
+            setExporting(false);
         }
     };
 
@@ -71,7 +140,7 @@ const AnalyticsHub = () => {
     ] : [];
 
     return (
-        <div className="min-h-screen bg-slate-900 text-slate-100 p-8" ref={reportRef}>
+        <div id="analytics-report" className="min-h-screen bg-slate-900 text-slate-100 p-8" ref={reportRef}>
             <div className="max-w-7xl mx-auto">
                 <header className="flex justify-between items-center mb-10 p-5 bg-slate-800/40 backdrop-blur-xl border border-slate-700/50 rounded-2xl shadow-xl shadow-black/20">
                     <div className="flex items-center gap-4">
@@ -84,9 +153,9 @@ const AnalyticsHub = () => {
                         </div>
                     </div>
                     <div className="flex items-center gap-4">
-                        <Button id="download-btn" onClick={downloadPDF} className="bg-emerald-600 hover:bg-emerald-500 flex items-center gap-2">
+                        <Button id="download-btn" onClick={downloadPDF} disabled={exporting} className="bg-emerald-600 hover:bg-emerald-500 flex items-center gap-2">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                            Export PDF
+                            {exporting ? 'Preparing PDF...' : 'Export PDF'}
                         </Button>
                         <Link id="back-btn" to="/dashboard" className="text-sm text-slate-400 hover:text-white transition-colors">Back to Dashboard</Link>
                     </div>
