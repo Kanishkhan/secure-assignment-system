@@ -6,7 +6,7 @@ const newPassword = 'admin123';
 
 (async () => {
     try {
-        const hashedPassword = await bcrypt.hash(newPassword, 12);
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
 
         db.run("UPDATE users SET password = ? WHERE username = 'Admin'", [hashedPassword], function (err) {
             if (err) {
