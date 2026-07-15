@@ -22,7 +22,7 @@ router.post('/register', async (req, res) => {
     // NIST recommended: high work factor. Async bcrypt handles salt generation automatically.
     // Salt is stored as part of the hash string in bcrypt format.
     try {
-        const hashedPassword = await bcrypt.hash(password, 12);
+        const hashedPassword = await bcrypt.hash(password, 10);
 
         const newUser = await User.create({
             username,
